@@ -55,8 +55,6 @@ tasks/                      # Task templates and workflows
 
 ## 🎯 Features
 
-### MidiGen
-
 ✨ **Natural Language Music Creation**
 - Describe music in plain English
 - AI understands genre, tempo, key, emotion
@@ -67,22 +65,15 @@ tasks/                      # Task templates and workflows
 - Multi-turn conversations for iterative building
 - Music theory-aware generation
 
+🤖 **Powered by MiniMax M2.5**
+- Default LLM: [MiniMax M2.5](https://platform.minimaxi.com/) (state-of-the-art reasoning)
+- Fallback: Groq (llama-4-maverick / llama-3.3-70b)
+- Fallback: Google Gemini
+
 🎛️ **Professional Output**
 - Standard MIDI format (compatible with all DAWs)
-- Multiple genre support (pop, rock, classical, etc.)
+- Multiple genre support (pop, rock, classical, lo-fi, jazz, electronic, cinematic)
 - Proper music theory implementation
-
-### Spec-Kit
-
-📝 **Specification-First Development**
-- Define requirements clearly before coding
-- AI agents implement based on specifications
-- Automated context management
-
-🤖 **AI Integration**
-- Works with any LLM (Claude, Gemini, Groq, etc.)
-- Context-aware code generation
-- Self-refining agent workflows
 
 ## 🚀 Usage
 
@@ -96,28 +87,33 @@ python main.py
 ### Programmatic
 
 ```python
-from src.app import MidiGenApp
+from src.app import MusicGenerator, MIDIGenerator
+from src.config import LLMConfig
 
-app = MidiGenApp()
-app.process_message("Create a pop song", [])
+LLMConfig.initialize()
+generator = MusicGenerator()
 ```
 
 ## 🔧 Configuration
 
 ### LLM Providers
 
-```python
-from src.config import LLMConfig
+text2midi uses **MiniMax M2.5** by default — a state-of-the-art reasoning model. Set your API key and it will be used automatically. Groq and Gemini serve as fallbacks.
 
-# Available: 'gemini' (default), 'groq'
-LLMConfig.set_provider('groq')
-```
+| Priority | Provider | Model | Get Key |
+|----------|----------|-------|---------|
+| 1st (default) | **MiniMax M2.5** | MiniMax-M2.5 | [platform.minimaxi.com](https://platform.minimaxi.com/) |
+| 2nd (fallback) | Groq | llama-4-maverick | [console.groq.com](https://console.groq.com/) |
+| 3rd (fallback) | Google Gemini | gemini-2.0-flash | [aistudio.google.com](https://aistudio.google.com/) |
 
 ### Environment Variables
 
+Copy `.env.example` to `.env` and fill in your keys:
+
 ```bash
-export GEMINI_API_KEY="your-key"    # Google Gemini
-export GROQ_API_KEY="your-key"      # Groq
+MINIMAX_API_KEY=your-key-here   # Default provider
+GROQ_API_KEY=your-key-here      # First fallback
+GEMINI_API_KEY=your-key-here    # Second fallback
 ```
 
 ## 📊 Output

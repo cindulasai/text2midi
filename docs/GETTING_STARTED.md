@@ -26,10 +26,34 @@ poetry install
 pip install -r requirements.txt
 ```
 
-### Step 2: Run text2midi
+### Step 2: Set Up Your API Key
+
+text2midi uses **MiniMax M2.5** as its default AI model. Copy `.env.example` to `.env` and add your key:
+
+```bash
+cp .env.example .env
+```
+
+Then open `.env` and fill in at least one key:
+
+```
+MINIMAX_API_KEY=your-key-here    # ⭐ Default (recommended) — platform.minimaxi.com
+GROQ_API_KEY=your-key-here       # Fallback — console.groq.com (free tier available)
+GEMINI_API_KEY=your-key-here     # Fallback — aistudio.google.com (free tier available)
+```
+
+> **Provider priority:** MiniMax M2.5 → Groq → Gemini. text2midi auto-selects the first key you provide.
+
+### Step 3: Run text2midi
 
 ```bash
 python main.py
+```
+
+You'll see the active model displayed at startup:
+```
+[INIT] Active LLM: MINIMAX
+[INIT] Model: MiniMax-M2.5 (default)
 ```
 
 ### Step 3: Create Your First Composition
