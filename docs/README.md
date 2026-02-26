@@ -1,97 +1,44 @@
-# Documentation
+# text2midi Documentation
 
-Complete documentation for Spec-Kit and MidiGen.
+Complete documentation for text2midi — AI-powered text-to-MIDI music generation.
 
-## 📚 Documentation Index
+## ��� Documentation Index
 
-### MidiGen (AI Music Generator)
+### Getting Started
 
-- **[Quick Start](QUICKSTART_MIDIGEN.md)** - Get started in 5 minutes
-- **[Architecture](ARCHITECTURE.md)** - System design and components
-- **[API Reference](API.md)** - Complete API documentation
+- **[Getting Started](GETTING_STARTED.md)** — Install and run in 5 minutes
+- **[MIDI Generation Guide](MIDI_GENERATION_GUIDE.md)** — Complete guide to generating music
 
-### Spec-Kit (Spec-Driven Development)
+### DAW Integration
 
-- **[Quick Start](QUICKSTART.md)** - Spec-Kit setup and workflow
-- **[Installation](installation.md)** - Detailed installation guide
-- **[Local Development](local-development.md)** - Development workflow
-- **[Upgrade Guide](upgrade.md)** - Version upgrades
+- **[Ableton Live](DAW_ABLETON_LIVE.md)** — Load MIDI into Ableton Live
+- **[Surge XT](DAW_SURGE_XT.md)** — Use with Surge XT synthesizer
 
-## 🚀 Quick Links
+### Reference
 
-**New to MidiGen?** Start with [QUICKSTART_MIDIGEN.md](QUICKSTART_MIDIGEN.md)
+- **[Track Types Reference](TRACK_TYPES_REFERENCE.md)** — Instruments, genres, parameters
+- **[Architecture](ARCHITECTURE.md)** — System design and agent pipeline
+- **[Documentation Hub](DOCUMENTATION_HUB.md)** — Full navigation index
 
-**Building systems with specs?** Start with [QUICKSTART.md](QUICKSTART.md)
+## ��� Quick Links
 
-## 📂 File Structure
+**New user?** Start with [GETTING_STARTED.md](GETTING_STARTED.md)
+
+**Want to generate music?** Jump to [MIDI_GENERATION_GUIDE.md](MIDI_GENERATION_GUIDE.md)
+
+**Using a DAW?** See [DAW_ABLETON_LIVE.md](DAW_ABLETON_LIVE.md) or [DAW_SURGE_XT.md](DAW_SURGE_XT.md)
+
+## ��� File Structure
 
 ```
 docs/
 ├── README.md                    # This file (navigation hub)
-├── ARCHITECTURE.md              # MidiGen system design
-├── API.md                       # API reference
-├── QUICKSTART.md                # Spec-Kit quick start
-├── QUICKSTART_MIDIGEN.md        # MidiGen quick start
-├── installation.md              # Installation guide
-├── local-development.md         # Development setup
-├── upgrade.md                   # Version upgrades
-├── archive/                     # Old/legacy documentation
-├── docfx.json                   # DocFX configuration
-├── index.md                     # Homepage
-├── toc.yml                      # Table of contents
-└── ...
+├── GETTING_STARTED.md           # Quick start guide
+├── MIDI_GENERATION_GUIDE.md     # Full generation guide
+├── DAW_ABLETON_LIVE.md          # Ableton Live integration
+├── DAW_SURGE_XT.md              # Surge XT integration
+├── TRACK_TYPES_REFERENCE.md     # Instruments & genres reference
+├── ARCHITECTURE.md              # System architecture
+├── DOCUMENTATION_HUB.md         # Complete documentation index
+└── PROJECT_SUMMARY.md           # Project overview
 ```
-
-## 🛠️ Building Documentation (Spec-Kit)
-
-To build the full documentation locally:
-
-```bash
-# Install DocFX
-dotnet tool install -g docfx
-
-# Build and serve
-cd docs
-docfx docfx.json --serve
-```
-
-Open `http://localhost:8080` to view the documentation.
-
-## 📖 What's Included
-
-### MidiGen
-- Complete API reference
-- Architecture diagrams and explanations
-- Configuration guide
-- Troubleshooting
-- Code examples
-- Performance guidelines
-
-### Spec-Kit
-- Installation instructions
-- Development workflow
-- Specification format guide
-- Agent integration
-- CLI reference
-- Examples and templates
-
-## 🔍 Search
-
-Use the search function in the built documentation to find specific topics.
-
-## 💡 Tips
-
-- **Just starting?** See [QUICKSTART_MIDIGEN.md](QUICKSTART_MIDIGEN.md) for MidiGen or [QUICKSTART.md](QUICKSTART.md) for Spec-Kit
-- **Need architecture details?** Check [ARCHITECTURE.md](ARCHITECTURE.md)
-- **Looking for API docs?** See [API.md](API.md)
-- **Having issues?** Check TROUBLESHOOTING sections in quick start guides
-
----
-
-Last Updated: 2024
-Part of [Spec-Kit](https://github.com/github/spec-kit)
-- `_site/` - Generated documentation output (ignored by git)
-
-## Deployment
-
-Documentation is automatically built and deployed to GitHub Pages when changes are pushed to the `main` branch. The workflow is defined in `.github/workflows/docs.yml`.

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MidiGen v2.0 - Main Entry Point
+text2midi - Main Entry Point
 Command-line interface for AI-powered MIDI generation with LangGraph agentic architecture.
 """
 

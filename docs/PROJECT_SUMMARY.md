@@ -8,7 +8,7 @@ This project is:
 - Generates 1-8 track MIDI files with intelligent arrangement
 - Supports 10+ genres and multi-turn refinement
 - Output: Standard MIDI files for any DAW
-- Has Gradio web UI and LangGraph agentic architecture
+- Has LangGraph multi-agent agentic architecture
 
 ---
 
@@ -248,38 +248,7 @@ Untracked files (should be in .gitignore):
 
 ## ✅ Recommendation Summary
 
-### Primary Choice: **Lyra**
-- **Repository:** `lyra-composer` or `lyra-music` (or just `lyra`)
-- **Python package:** `lyra` or `lyra_composer`
-- **Documentation:** Ready (6 comprehensive guides)
-- **User base:** Musicians, producers, hobbyists, creators
-
-### Why This Works
-1. **Clear identity** - Not another Spec-Kit, but a music tool
-2. **Beautiful name** - Greek muse of music
-3. **Professional** - Suitable for serious musicians
-4. **Approachable** - Accessible to beginners
-5. **Documented** - World-class documentation to match
-
----
-
-## 🎵 Ready to Proceed?
-
-Once you confirm:
-1. **Name choice** (recommend: Lyra)
-2. **Repository name** (recommend: lyra-composer)
-
-I can:
-1. ✅ Update all code references
-2. ✅ Update pyproject.toml with new name & version
-3. ✅ Update README with new identity
-4. ✅ Commit all changes
-5. ✅ Create new GitHub repo
-6. ✅ Push everything to new repo
-
-**All the hard work (documentation) is already done!** 🎉
-
 ---
 
 *Documentation created: February 26, 2026*
-*Project: Lyra (formerly spec-kit/MidiGen)*
+*Project: text2midi — AI-Powered MIDI Composer*

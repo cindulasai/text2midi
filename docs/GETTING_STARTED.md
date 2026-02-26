@@ -19,8 +19,8 @@ text2midi is an AI-powered music composition engine that:
 # Clone or navigate to the project
 cd text2midi
 
-# Install dependencies with Poetry
-poetry install
+# Install dependencies with uv (recommended)
+uv sync
 
 # Or with pip
 pip install -r requirements.txt

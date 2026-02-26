@@ -76,5 +76,5 @@ build-backend = "hatchling.build"
 package-mode = false
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/specify_cli"]
+packages = ["src/app", "src/agents", "src/config", "src/midigent"]
 

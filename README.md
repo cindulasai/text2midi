@@ -5,8 +5,8 @@
 ## 🎵 Quick Start
 
 ```bash
-# Install with Poetry (recommended)
-poetry install
+# Install with uv (recommended)
+uv sync
 
 # Run the CLI
 python main.py
@@ -26,7 +26,7 @@ python main.py
 
 ## 📂 What's Inside
 
-### MidiGen Components
+### Project Structure
 
 ```
 src/app/                    # Main application
@@ -41,16 +41,8 @@ src/app/                    # Main application
 src/config/                 # Configuration
 └── llm.py                  # LLM provider management
 
-src/agents/                 # LangGraph agents (optional)
-src/midigent/               # Additional music engines
-```
-
-### Additional Features
-
-```
-memory/                     # Knowledge base and preferences
-outputs/                    # Generated MIDI files
-tasks/                      # Task templates and workflows
+src/agents/                 # LangGraph agents
+src/midigent/               # Advanced music generation engines
 ```
 
 ## 🎯 Features
@@ -120,7 +112,7 @@ GEMINI_API_KEY=your-key-here    # Second fallback
 
 MIDI files are saved to `outputs/` with naming format:
 ```
-midigen_<genre>_<session_id>_<timestamp>.mid
+text2midi_<genre>_<session_id>_<timestamp>.mid
 ```
 
 Open with any MIDI-compatible tool:
@@ -132,42 +124,43 @@ Open with any MIDI-compatible tool:
 
 | Topic | Link |
 |-------|------|
-| MidiGen Quick Start | [docs/QUICKSTART_MIDIGEN.md](docs/QUICKSTART_MIDIGEN.md) |
+| Getting Started | [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) |
+| MIDI Generation Guide | [docs/MIDI_GENERATION_GUIDE.md](docs/MIDI_GENERATION_GUIDE.md) |
+| Ableton Live | [docs/DAW_ABLETON_LIVE.md](docs/DAW_ABLETON_LIVE.md) |
+| Surge XT | [docs/DAW_SURGE_XT.md](docs/DAW_SURGE_XT.md) |
+| Track Types Reference | [docs/TRACK_TYPES_REFERENCE.md](docs/TRACK_TYPES_REFERENCE.md) |
 | Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| API Reference | [docs/API.md](docs/API.md) |
-| Spec-Kit Quick Start | [docs/QUICKSTART.md](docs/QUICKSTART.md) |
-| Installation | [docs/installation.md](docs/installation.md) |
 
 ## 🛠️ Development
 
 ### Install Development Dependencies
 
 ```bash
-poetry install --with dev
+uv sync
 ```
 
 ### Code Quality
 
 ```bash
 # Format code
-black src/
+uv run ruff format .
 
 # Lint
-ruff check src/
+uv run ruff check .
 
 # Type check
-mypy src/
+uv run mypy src/
 
 # Run tests
-pytest tests/
+uv run pytest tests/
 ```
 
 ### Running Tests
 
 ```bash
-pytest tests/
-pytest tests/test_generator.py -v
-pytest --cov=src tests/        # With coverage
+uv run pytest tests/
+uv run pytest tests/midi_generation/ -v
+uv run pytest --cov=src tests/        # With coverage
 ```
 
 ## 🔌 Requirements
@@ -175,24 +168,18 @@ pytest --cov=src tests/        # With coverage
 - **Python**: 3.11+
 - **Dependencies**: See [pyproject.toml](pyproject.toml)
 - **MIDI**: mido library
-- **Web UI**: Gradio
-- **LLM**: Groq or Google Generative AI API key (optional)
+- **LLM**: At least one of: MiniMax, Groq, or Gemini API key
 
 ## 📦 Installation Methods
 
-### Poetry (Recommended)
+### UV (Recommended)
 ```bash
-poetry install
+uv sync
 ```
 
 ### Pip
 ```bash
 pip install -r requirements.txt
-```
-
-### UV (Fast)
-```bash
-uv pip install -r requirements.txt
 ```
 
 ## 🤝 Contributing
@@ -204,21 +191,13 @@ uv pip install -r requirements.txt
 
 ## 📜 License
 
-This project is built on top of [GitHub Spec-Kit](https://github.com/github/spec-kit).
-
 See [LICENSE](LICENSE) for details.
 
 ## 🆘 Support
 
-**MidiGen Issues?**
-- Check [docs/QUICKSTART_MIDIGEN.md](docs/QUICKSTART_MIDIGEN.md) troubleshooting
+- Check [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for troubleshooting
 - Review [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for design details
-- Check error messages in console output
-
-**Spec-Kit Questions?**
-- See [AGENTS.md](AGENTS.md) for agent integration
-- Review [docs/](docs/) for comprehensive guides
-- Check [memory/](memory/) for skills and patterns
+- Open a [GitHub issue](https://github.com/cindulasai/text2midi/issues/new) for bugs or feature requests
 
 ## 🎵 What Can You Create?
 
@@ -236,14 +215,11 @@ See [LICENSE](LICENSE) for details.
 
 **Created with ❤️ by developers for musicians and music developers**
 
-*MidiGen: Generate music with AI | Spec-Kit: Build software with specs*
-
 ## Tech Stack
 
-- **UI**: Gradio
 - **MIDI**: mido
-- **LLM**: Groq (llama-3.3-70b-versatile)
-- **Methodology**: Spec-Driven Development (spec-kit)
+- **LLM**: MiniMax M2.5 (default), Groq, Google Gemini
+- **Agents**: LangGraph
 
 ## License
 

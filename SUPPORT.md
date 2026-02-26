@@ -2,17 +2,18 @@
 
 ## How to file issues and get help
 
-This project uses GitHub issues to track bugs and feature requests. Please search the existing issues before filing new issues to avoid duplicates. For new issues, file your bug or feature request as a new issue.
+This project uses GitHub issues to track bugs and feature requests. Please search the existing issues before filing new issues to avoid duplicates.
 
-For help or questions about using this project, please:
+For help or questions about using text2midi, please:
 
-- Open a [GitHub issue](https://github.com/github/spec-kit/issues/new) for bug reports, feature requests, or questions about the Spec-Driven Development methodology
-- Check the [comprehensive guide](./spec-driven.md) for detailed documentation on the Spec-Driven Development process
-- Review the [README](./README.md) for getting started instructions and troubleshooting tips
+- Open a [GitHub issue](https://github.com/cindulasai/text2midi/issues/new) for bug reports or feature requests
+- Start a [GitHub Discussion](https://github.com/cindulasai/text2midi/discussions) for questions and community help
+- Review the [Getting Started guide](./docs/GETTING_STARTED.md) and [MIDI Generation Guide](./docs/MIDI_GENERATION_GUIDE.md)
+- Check the [README](./README.md) for installation and quickstart instructions
 
 ## Project Status
 
-**Spec Kit** is under active development and maintained by GitHub staff **AND THE COMMUNITY**. We will do our best to respond to support, feature requests, and community questions in a timely manner.
+**text2midi** is under active development. We will do our best to respond to support requests and community questions in a timely manner.
 
 ## GitHub Support Policy
 

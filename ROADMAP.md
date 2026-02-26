@@ -1,4 +1,4 @@
-# 🗺️ MidiGen v2.0 - Complete Project Roadmap
+# 🗺️ text2midi - Complete Project Roadmap
 
 **Status:** ✅ **100% COMPLETE**  
 **Date:** February 8, 2026  
@@ -143,7 +143,7 @@
 
 ### Code Artifacts
 ```
-✅ app_langgraph.py              750 lines
+✅ main.py              750 lines
 ✅ src/agents/state.py           180 lines
 ✅ src/agents/nodes.py           650 lines
 ✅ src/agents/graph.py           200 lines
@@ -315,10 +315,10 @@ Total Documentation:              4,500+ lines
 pip install poetry
 
 # 2. Install dependencies
-poetry install
+uv sync
 
 # 3. Run the app
-poetry run python app_langgraph.py
+python main.py
 
 # 4. Open browser
 http://localhost:7860
@@ -438,8 +438,8 @@ This project has been completely transformed:
 
 ```bash
 pip install poetry
-poetry install
-poetry run python app_langgraph.py
+uv sync
+python main.py
 ```
 
 Then open: **http://localhost:7860** 🎵
@@ -459,13 +459,13 @@ Then open: **http://localhost:7860** 🎵
 
 ---
 
-**Project:** MidiGen v2.0  
+**Project:** text2midi  
 **Status:** ✅ Production Ready  
 **Version:** 2.0 (Agentic + Poetry)  
 **Quality:** ✨ Excellent  
 **Ready:** NOW! 🚀
 
-**Thank you for using MidiGen v2.0!** 🎵✨
+**Thank you for using text2midi!** 🎵✨
 
 ---
 

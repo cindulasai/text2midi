@@ -24,7 +24,21 @@ wheels/
 venv/
 ENV/
 env/
-.venv
+.venv/
+
+# Test cache
+.pytest_cache/
+
+# Tool version managers
+.tool-versions
+
+# Lock files (using uv.lock instead)
+poetry.lock
+
+# Project-specific directories (not for public repo)
+plans/
+specs/
+tasks/
 
 # IDE
 .vscode/
@@ -38,17 +52,13 @@ env/
 *.log
 .env
 .env.local
-*.lock
 
 # Build and release
 .genreleases/
 *.zip
-sdd-*/
 
 # Generated outputs (user MIDI files - do not commit)
-outputs/*.mid
-outputs/*.mp3
-outputs/*.wav
+outputs/
 
 # MIDI generation test artefacts
 tests/midi_generation/outputs/*.mid

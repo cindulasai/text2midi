@@ -1,7 +1,7 @@
 .PHONY: help install dev test lint format type-check clean run shell update
 
 help:
-	@echo "🎵 MidiGen v2.0 - Poetry Commands"
+	@echo "🎵 text2midi - Commands"
 	@echo ""
 	@echo "Setup:"
 	@echo "  make install      Install dependencies"
@@ -24,35 +24,35 @@ help:
 
 install:
 	@echo "📦 Installing dependencies..."
-	poetry install --no-dev
+	uv sync
 
 dev:
 	@echo "🛠️  Installing with dev dependencies..."
-	poetry install
+	uv sync --all-extras
 
 run:
-	@echo "🚀 Running MidiGen..."
-	poetry run python app_langgraph.py
+	@echo "🚀 Running text2midi..."
+	python main.py
 
 shell:
 	@echo "🐚 Activating virtual environment..."
-	poetry shell
+	uv run bash
 
 test:
 	@echo "🧪 Running tests..."
-	poetry run pytest -v
+	uv run pytest -v
 
 lint:
 	@echo "🔍 Linting code..."
-	poetry run ruff check .
+	uv run ruff check .
 
 format:
 	@echo "✨ Formatting code..."
-	poetry run black .
+	uv run ruff format .
 
 type-check:
 	@echo "📋 Type checking..."
-	poetry run mypy src/
+	uv run mypy src/
 
 clean:
 	@echo "🧹 Cleaning up..."
@@ -65,15 +65,15 @@ clean:
 
 update:
 	@echo "🔄 Updating dependencies..."
-	poetry update
+	uv sync --upgrade
 
 add-dep:
 	@echo "📥 Add dependency (usage: make add-dep PKG=package-name)"
-	poetry add $(PKG)
+	uv add $(PKG)
 
 add-dev-dep:
 	@echo "📥 Add dev dependency (usage: make add-dev-dep PKG=package-name)"
-	poetry add --group dev $(PKG)
+	uv add --dev $(PKG)
 
 # Quick shortcuts
 i: install
