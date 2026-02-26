@@ -26,24 +26,22 @@ poetry install
 pip install -r requirements.txt
 ```
 
-### Step 2: Start the Web UI
+### Step 2: Run text2midi
 
 ```bash
-python ui.py
+python main.py
 ```
-
-Open your browser to: **http://localhost:7860**
 
 ### Step 3: Create Your First Composition
 
-1. **Enter a music description** in the text box:
+1. **Enter a music description** when prompted:
    ```
    Upbeat pop song with drums, bass, and bright piano
    ```
 
-2. **Click Generate** and wait 10-30 seconds
+2. **Wait 10-30 seconds** for generation
 
-3. **Download the MIDI file** and import into your DAW
+3. **Find your MIDI file** in the `outputs/` folder and import into your DAW
 
 That's it! You've created your first AI composition.
 

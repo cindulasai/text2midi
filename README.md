@@ -8,11 +8,9 @@
 # Install with Poetry (recommended)
 poetry install
 
-# Run the web UI
-python ui.py
+# Run the CLI
+python main.py
 ```
-
-Open [http://localhost:7860](http://localhost:7860) and start creating music instantly!
 
 ### Example Prompts
 
@@ -39,7 +37,6 @@ src/app/                    # Main application
 ├── track_planner.py        # Track planning (TrackPlanner)
 ├── intent_parser.py        # NLP understanding (IntentParser)
 ├── session.py              # Session utilities
-└── ui.py                   # Web interface (Gradio)
 
 src/config/                 # Configuration
 └── llm.py                  # LLM provider management
@@ -89,14 +86,7 @@ tasks/                      # Task templates and workflows
 
 ## 🚀 Usage
 
-### Web UI
-
-```bash
-python ui.py
-# Visit http://localhost:7860
-```
-
-### CLI (Agent-based Workflow)
+### CLI
 
 ```bash
 python main.py
