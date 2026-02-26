@@ -11,7 +11,7 @@ These are one-time installations required to test your changes locally.
 1. Install [Python 3.11+](https://www.python.org/downloads/)
 2. Install [uv](https://docs.astral.sh/uv/) for package management
 3. Install [Git](https://git-scm.com/downloads)
-4. Obtain at least one LLM API key: [MiniMax](https://minimaxi.com), [Groq](https://console.groq.com), or [Google AI](https://aistudio.google.com)
+4. Obtain at least one LLM API key: [MiniMax](https://minimaxi.com) or [Groq](https://console.groq.com)
 
 ## Setup
 

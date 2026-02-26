@@ -6,14 +6,12 @@ Handles provider initialization and LLM calls.
 Provider priority (highest → lowest):
   1. MiniMax M2.5  (default)
   2. Groq          (fallback)
-  3. Gemini        (fallback)
 """
 
 import logging
 import os
 from typing import Optional
 
-import google.genai as genai
 from groq import Groq
 from openai import OpenAI
 
@@ -23,9 +21,6 @@ logger = logging.getLogger(__name__)
 # Model lists
 # ---------------------------------------------------------------------------
 
-# Gemini models tried in preference order
-_GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
-
 # MiniMax base URL (international endpoint, OpenAI-compatible)
 _MINIMAX_BASE_URL = "https://api.minimaxi.chat/v1"
 _MINIMAX_MODEL = "MiniMax-M2.5"
@@ -34,7 +29,7 @@ _MINIMAX_MODEL = "MiniMax-M2.5"
 class LLMConfig:
     """Runtime configuration for LLM provider selection.
 
-    Provider priority: minimax → groq → gemini.
+    Provider priority: minimax → groq.
     Any provider that is not configured is skipped; the next available one
     becomes the default.
     """
@@ -49,20 +44,18 @@ class LLMConfig:
     # Read from environment only – never hard-code secrets in source.
     MINIMAX_API_KEY: str = os.environ.get("MINIMAX_API_KEY", "")
     GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
-    GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
 
     @classmethod
     def initialize(cls) -> None:
         """Detect and register available LLM providers.
 
         Registration order determines fallback priority:
-          minimax → groq → gemini
+          minimax → groq
         The first successfully registered provider becomes the default.
         """
         # Reload keys in case .env was loaded after module import
         cls.MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
         cls.GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-        cls.GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
         cls.AVAILABLE_PROVIDERS.clear()
 
@@ -83,14 +76,6 @@ class LLMConfig:
         # 2. Groq (first fallback)
         if cls.GROQ_API_KEY:
             cls.AVAILABLE_PROVIDERS.append("groq")
-
-        # 3. Gemini (second fallback)
-        if cls.GEMINI_API_KEY:
-            try:
-                genai.Client(api_key=cls.GEMINI_API_KEY)
-                cls.AVAILABLE_PROVIDERS.append("gemini")
-            except Exception as exc:
-                logger.warning("[LLM Config] Gemini init failed: %s", exc)
 
         # First available provider wins the default slot
         cls.DEFAULT_PROVIDER = (
@@ -166,7 +151,6 @@ def call_llm(
     _DISPATCH = {
         "minimax": _call_minimax,
         "groq":    _call_groq,
-        "gemini":  _call_gemini,
     }
 
     for attempt_provider in ordered:
@@ -216,31 +200,6 @@ def _call_minimax(
         max_tokens=max_tokens,
     )
     return resp.choices[0].message.content.strip()
-
-
-def _call_gemini(
-    system_prompt: str,
-    user_message: str,
-    temperature: float,
-    max_tokens: int,
-) -> Optional[str]:
-    """Call Gemini with automatic model fallback."""
-    client = genai.Client(api_key=LLMConfig.GEMINI_API_KEY)
-    for model in _GEMINI_MODELS:
-        try:
-            response = client.models.generate_content(
-                model=model,
-                contents=user_message,
-                config=genai.types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=temperature,
-                    max_output_tokens=max_tokens,
-                ),
-            )
-            return response.text
-        except Exception:
-            continue
-    return None
 
 
 def _call_groq(

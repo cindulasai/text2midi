@@ -58,9 +58,8 @@ src/midigent/               # Advanced music generation engines
 - Music theory-aware generation
 
 🤖 **Powered by MiniMax M2.5**
-- Default LLM: [MiniMax M2.5](https://platform.minimaxi.com/) (state-of-the-art reasoning)
+- Default LLM: [MiniMax M2.5](https://platform.minimaxi.com/) (state-of-the-art coding model)
 - Fallback: Groq (llama-4-maverick / llama-3.3-70b)
-- Fallback: Google Gemini
 
 🎛️ **Professional Output**
 - Standard MIDI format (compatible with all DAWs)
@@ -90,13 +89,12 @@ generator = MusicGenerator()
 
 ### LLM Providers
 
-text2midi uses **MiniMax M2.5** by default — a state-of-the-art reasoning model. Set your API key and it will be used automatically. Groq and Gemini serve as fallbacks.
+text2midi uses **MiniMax M2.5** by default — a state-of-the-art coding model. Set your API key and it will be used automatically. Groq serves as fallback.
 
 | Priority | Provider | Model | Get Key |
 |----------|----------|-------|---------|
 | 1st (default) | **MiniMax M2.5** | MiniMax-M2.5 | [platform.minimaxi.com](https://platform.minimaxi.com/) |
 | 2nd (fallback) | Groq | llama-4-maverick | [console.groq.com](https://console.groq.com/) |
-| 3rd (fallback) | Google Gemini | gemini-2.0-flash | [aistudio.google.com](https://aistudio.google.com/) |
 
 ### Environment Variables
 
@@ -104,8 +102,7 @@ Copy `.env.example` to `.env` and fill in your keys:
 
 ```bash
 MINIMAX_API_KEY=your-key-here   # Default provider
-GROQ_API_KEY=your-key-here      # First fallback
-GEMINI_API_KEY=your-key-here    # Second fallback
+GROQ_API_KEY=your-key-here      # Fallback
 ```
 
 ## 📊 Output
@@ -168,7 +165,7 @@ uv run pytest --cov=src tests/        # With coverage
 - **Python**: 3.11+
 - **Dependencies**: See [pyproject.toml](pyproject.toml)
 - **MIDI**: mido library
-- **LLM**: At least one of: MiniMax, Groq, or Gemini API key
+- **LLM**: At least one of: MiniMax or Groq API key
 
 ## 📦 Installation Methods
 
@@ -218,7 +215,7 @@ See [LICENSE](LICENSE) for details.
 ## Tech Stack
 
 - **MIDI**: mido
-- **LLM**: MiniMax M2.5 (default), Groq, Google Gemini
+- **LLM**: MiniMax M2.5 coding model (default), Groq
 - **Agents**: LangGraph
 
 ## License

@@ -87,9 +87,8 @@ Output: outputs/text2midi_{genre}_{hash}_{timestamp}.mid
 
 | Priority | Provider | Model | API Key |
 |----------|----------|-------|---------|
-| 1 (default) | MiniMax | MiniMax-M2.5 | `MINIMAX_API_KEY` |
+| 1 (default) | MiniMax M2.5 | MiniMax-M2.5 (coding model) | `MINIMAX_API_KEY` |
 | 2 (fallback) | Groq | llama-4-maverick | `GROQ_API_KEY` |
-| 3 (fallback) | Google | gemini-2.0-flash | `GEMINI_API_KEY` |
 
 Provider is auto-selected at startup based on which API key is present.
 

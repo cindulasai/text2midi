@@ -39,10 +39,9 @@ Then open `.env` and fill in at least one key:
 ```
 MINIMAX_API_KEY=your-key-here    # ⭐ Default (recommended) — platform.minimaxi.com
 GROQ_API_KEY=your-key-here       # Fallback — console.groq.com (free tier available)
-GEMINI_API_KEY=your-key-here     # Fallback — aistudio.google.com (free tier available)
 ```
 
-> **Provider priority:** MiniMax M2.5 → Groq → Gemini. text2midi auto-selects the first key you provide.
+> **Provider priority:** MiniMax M2.5 → Groq. text2midi auto-selects the first key you provide.
 
 ### Step 3: Run text2midi
 

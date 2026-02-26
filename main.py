@@ -27,11 +27,9 @@ def initialize_system():
     provider = LLMConfig.DEFAULT_PROVIDER or "none configured"
     print(f"[INIT] Active LLM: {provider.upper()}")
     if provider == "minimax":
-        print("[INIT] Model: MiniMax-M2.5 (default)")
+        print("[INIT] Model: MiniMax-M2.5 coding model (default)")
     elif provider == "groq":
         print(f"[INIT] Model: {LLMConfig.CURRENT_GROQ_MODEL} via Groq")
-    elif provider == "gemini":
-        print("[INIT] Model: Gemini (fallback)")
     else:
         print("[INIT] WARNING: No API key found. Set MINIMAX_API_KEY in .env")
     print("[INIT] System ready.\n")
@@ -41,7 +39,7 @@ def print_header():
     """Print application header."""
     print("\n" + "="*70)
     print("  text2midi - AI-Powered MIDI Composer")
-    print("  Powered by MiniMax M2.5 | Groq | Gemini")
+    print("  Powered by MiniMax M2.5 (coding model) | Groq")
     print("  Create music through natural language. No music knowledge required!")
     print("="*70)
     try:

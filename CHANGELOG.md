@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Intent Parser, Track Planner, Music Theory Validator
   - Track Generator, Quality Control, Refinement
   - MIDI Creator, Session Summary
-- Multi-provider LLM support: MiniMax M2.5 (default), Groq llama-4-maverick, Google Gemini 2.0 Flash
+- Multi-provider LLM support: MiniMax M2.5 coding model (default), Groq llama-4-maverick (fallback)
 - Automatic provider detection via environment variables
 - Support for 8 genres: ambient, cinematic, classical, electronic, funk, jazz, lofi, pop
 - Up to 8 simultaneous MIDI tracks with instrument assignment
