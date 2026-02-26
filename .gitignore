@@ -36,9 +36,9 @@ env/
 poetry.lock
 
 # Project-specific directories (not for public repo)
-plans/
-specs/
-tasks/
+/plans/
+/specs/
+/tasks/
 
 # IDE
 .vscode/

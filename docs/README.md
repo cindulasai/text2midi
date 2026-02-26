@@ -2,7 +2,7 @@
 
 Complete documentation for text2midi — AI-powered text-to-MIDI music generation.
 
-## ��� Documentation Index
+## ��� Documentation Index
 
 ### Getting Started
 
@@ -20,7 +20,13 @@ Complete documentation for text2midi — AI-powered text-to-MIDI music generatio
 - **[Architecture](ARCHITECTURE.md)** — System design and agent pipeline
 - **[Documentation Hub](DOCUMENTATION_HUB.md)** — Full navigation index
 
-## ��� Quick Links
+### Development
+
+- **[specs/](specs/)** — Feature specifications
+- **[plans/](plans/)** — Implementation plans
+- **[tasks/](tasks/)** — Task breakdowns
+
+## ��� Quick Links
 
 **New user?** Start with [GETTING_STARTED.md](GETTING_STARTED.md)
 
@@ -28,7 +34,7 @@ Complete documentation for text2midi — AI-powered text-to-MIDI music generatio
 
 **Using a DAW?** See [DAW_ABLETON_LIVE.md](DAW_ABLETON_LIVE.md) or [DAW_SURGE_XT.md](DAW_SURGE_XT.md)
 
-## ��� File Structure
+## ��� File Structure
 
 ```
 docs/
@@ -40,5 +46,8 @@ docs/
 ├── TRACK_TYPES_REFERENCE.md     # Instruments & genres reference
 ├── ARCHITECTURE.md              # System architecture
 ├── DOCUMENTATION_HUB.md         # Complete documentation index
-└── PROJECT_SUMMARY.md           # Project overview
+├── PROJECT_SUMMARY.md           # Project overview
+├── specs/                       # Feature specifications
+├── plans/                       # Implementation plans
+└── tasks/                       # Task breakdowns
 ```
