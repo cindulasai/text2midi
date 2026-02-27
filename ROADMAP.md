@@ -1,7 +1,7 @@
 # 🗺️ text2midi - Complete Project Roadmap
 
 **Status:** ✅ **100% COMPLETE**  
-**Date:** February 8, 2026  
+**Date:** February 26, 2026  
 
 ---
 
@@ -107,19 +107,86 @@
 - [x] START_HERE.md
 - [x] This roadmap
 
+### Phase 5: Modern TUI (TASKS-001) ✅
+**Duration:** February 25–26, 2026  
+**Status:** Complete (33/33 tasks, 32/32 tests)
+
+**Foundation**
+- [x] Added Textual & platformdirs to pyproject.toml
+- [x] Created AppSettings with JSON persistence
+- [x] Added openai_custom provider to LLM config
+- [x] Created main_tui.py entry point
+
+**TUI Layout & Widgets**
+- [x] Catppuccin Mocha theme (styles.tcss)
+- [x] ApiKeySetup widget (provider select, password input, auto-show/hide)
+- [x] PromptInput widget (TextArea, Generate button, Surprise Me)
+- [x] ProgressPanel widget (progress bar, 8-node status)
+- [x] OutputPanel widget (DataTable, quality score, file path)
+- [x] Sidebar widget (Tree with presets + history)
+- [x] SuggestionCarousel (genre-filtered prompt chips)
+- [x] HelpScreen modal (F1 keybinding reference)
+
+**Pipeline Integration**
+- [x] GenerationWorker (threaded graph.stream())
+- [x] Message classes (NodeStarted, NodeCompleted, GenerationComplete, GenerationError)
+- [x] PromptSuggester with LLM autocomplete + StaticSuggester fallback
+- [x] HistoryManager with JSON file storage, auto-prune at 50
+
+**Polish & Testing**
+- [x] Global keybindings (Ctrl+G, Ctrl+R, Ctrl+H, Ctrl+S, Ctrl+O, Ctrl+Q, F1)
+- [x] Notification toasts, generation timeout at 120s
+- [x] 32 tests: AppSettings, HistoryManager, PromptSuggester, TUI App integration
+
+### Phase 6: VST3 Plugin (TASKS-002) ✅
+**Duration:** February 25–26, 2026  
+**Status:** Complete (33/33 tasks, 12/12 backend tests, 0 C++ warnings)
+
+**Python Backend Server**
+- [x] FastAPI server on 127.0.0.1:18323 with lifespan handler
+- [x] GET /health, POST /configure, POST /generate, GET /generate/stream (SSE)
+- [x] Full LangGraph pipeline integration (8 nodes)
+- [x] In-memory result caching with 5-minute expiry
+- [x] 12 unit tests with httpx AsyncClient
+- [x] Manual end-to-end testing (MIDI files generated successfully)
+
+**PyInstaller Bundle**
+- [x] build_backend.py with hidden imports for full pipeline
+- [x] 41 MB standalone bundle, tested with /health endpoint
+
+**JUCE C++ Plugin (9 source files)**
+- [x] CMakeLists.txt + JUCE 6.0.8 submodule
+- [x] PluginProcessor (stereo output, ValueTree state with XOR-obfuscated API key)
+- [x] PluginEditor (DragAndDropContainer, Timer health polling, auto-launch backend)
+- [x] HttpClient (juce::URL, InputStreamOptions chained pattern)
+- [x] BackendLauncher (3-location search, ChildProcess, health polling)
+- [x] ApiKeyPanel, PromptPanel, ProgressPanel, OutputPanel
+- [x] DraggableMidiFile (native OS drag-and-drop, SettableTooltipClient)
+- [x] PluginConfig.h (Catppuccin Mocha colours, port 18323, dimensions 550x650)
+- [x] Builds with MSVC 2022 + CMake 3.29 — 0 errors, 0 warnings
+- [x] 5.0 MB VST3 binary output
+
+**Build & Packaging**
+- [x] Inno Setup installer script (VST3 + server + optional startup)
+- [x] README.md (features, installation, troubleshooting, DAW compatibility)
+- [x] BUILDING.md (developer build instructions)
+- [x] Asset placeholders for logo and screenshots
+
 ---
 
 ## 📊 COMPLETION METRICS
 
 ### Code Delivery
-- **Python files created:** 5
-- **Configuration files:** 3
-- **Documentation files:** 25+
-- **Total files:** 33+
-- **Lines of code:** 1,810
-- **Lines of documentation:** 4,500+
-- **Type coverage:** 100%
+- **Python files created:** 20+
+- **C++ files created:** 19 (9 source pairs + PluginConfig.h)
+- **Configuration files:** 5
+- **Documentation files:** 30+
+- **Total files:** 64+
+- **Lines of code:** 7,400+
+- **Lines of documentation:** 6,000+
+- **Type coverage:** 100% (Python)
 - **Error handlers:** 50+
+- **Test suites:** 2 (TUI: 32 tests, Backend: 12 tests)
 
 ### Architecture
 - **Agents:** 8 (all complete)

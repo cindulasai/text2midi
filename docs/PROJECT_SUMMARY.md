@@ -135,6 +135,40 @@ I've created comprehensive, user-friendly documentation to help new users unders
 
 ---
 
+## 🖥️ User Interfaces
+
+### Terminal UI (TASKS-001) — ✅ Complete
+**Entry point:** `python main_tui.py` or `text2midi-tui`
+
+- **Framework:** Textual 8.0.0 with Catppuccin Mocha theme
+- **Widgets:** ApiKeySetup, PromptInput, ProgressPanel, OutputPanel, Sidebar, SuggestionCarousel, HelpScreen
+- **Features:** LLM provider management, generation worker with real-time progress, prompt suggestions, history system (JSON persistence), keyboard shortcuts
+- **Keybindings:** Ctrl+G (generate), Ctrl+R (random), Ctrl+H (sidebar), Ctrl+S (settings), Ctrl+O (open folder), F1 (help)
+- **Tests:** 32/32 passing in `tests/test_tui/`
+- **Source:** `main_tui.py`, `src/tui/`, `src/config/settings.py`
+
+### VST3 Plugin (TASKS-002) — ✅ Complete
+**Binary:** `text2midi.vst3` (5.0 MB, MSVC 2022 x64)
+
+- **Framework:** JUCE 6.0.8 (C++), FastAPI backend (Python)
+- **Architecture:** Plugin ↔ HTTP ↔ Python backend server (port 18323)
+- **Plugin UI:** ApiKeyPanel, PromptPanel, ProgressPanel, OutputPanel, DraggableMidiFile (native OS drag-and-drop to DAW)
+- **Backend:** 4 endpoints (health, configure, generate, stream SSE), full LangGraph pipeline
+- **Build:** 0 errors, 0 warnings with MSVC 2022 + CMake 3.29
+- **Bundle:** PyInstaller standalone executable (41 MB)
+- **Installer:** Inno Setup script for Windows distribution
+- **Tests:** 12/12 backend tests passing
+- **Source:** `vst-plugin/source/` (C++), `vst-plugin/python-backend/` (Python)
+
+### Web UI (Original)
+**Entry point:** `python main.py` → http://localhost:7860
+
+- **Framework:** Gradio
+- **Features:** Text prompt → MIDI generation, session management
+
+
+---
+
 ## 🎯 What These Docs Enable
 
 ### For New Users

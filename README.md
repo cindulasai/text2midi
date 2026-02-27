@@ -8,9 +8,16 @@
 # Install with uv (recommended)
 uv sync
 
-# Run the CLI
+# Run the Web UI (Gradio)
 python main.py
+
+# Run the Terminal UI
+python main_tui.py
 ```
+
+### VST3 Plugin
+
+See [vst-plugin/README.md](vst-plugin/README.md) for installation — load `text2midi.vst3` in any DAW, type a prompt, and drag the generated MIDI directly into your arrangement.
 
 ### Example Prompts
 
@@ -68,12 +75,31 @@ src/midigent/               # Advanced music generation engines
 
 ## 🚀 Usage
 
-### CLI
+### Web UI (Gradio)
 
 ```bash
 python main.py
-# Interactive music generation with self-refining agents
+# Opens http://localhost:7860 — interactive music generation with self-refining agents
 ```
+
+### Terminal UI (Textual)
+
+```bash
+python main_tui.py
+# Full-featured TUI: API key management, prompt suggestions, history, keyboard shortcuts
+# Keybindings: Ctrl+G (generate), Ctrl+R (random), F1 (help), Ctrl+Q (quit)
+```
+
+### VST3 Plugin (DAW Integration)
+
+```bash
+# Build from source (requires Visual Studio 2022 + CMake)
+cd vst-plugin && cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release
+# Copy text2midi.vst3 to your VST3 folder, load in any DAW
+```
+
+See [vst-plugin/BUILDING.md](vst-plugin/BUILDING.md) for full build instructions.
 
 ### Programmatic
 
@@ -127,6 +153,9 @@ Open with any MIDI-compatible tool:
 | Surge XT | [docs/DAW_SURGE_XT.md](docs/DAW_SURGE_XT.md) |
 | Track Types Reference | [docs/TRACK_TYPES_REFERENCE.md](docs/TRACK_TYPES_REFERENCE.md) |
 | Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| VST3 Plugin | [vst-plugin/README.md](vst-plugin/README.md) |
+| VST3 Building | [vst-plugin/BUILDING.md](vst-plugin/BUILDING.md) |
+| Project Summary | [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md) |
 
 ## 🛠️ Development
 
@@ -155,9 +184,10 @@ uv run pytest tests/
 ### Running Tests
 
 ```bash
-uv run pytest tests/
-uv run pytest tests/midi_generation/ -v
-uv run pytest --cov=src tests/        # With coverage
+uv run pytest tests/                       # All tests
+uv run pytest tests/test_tui/ -v           # TUI tests (32 tests)
+uv run pytest tests/ --cov=src             # With coverage
+cd vst-plugin/python-backend && python -m pytest test_server.py -v  # Backend tests (12 tests)
 ```
 
 ## 🔌 Requirements
@@ -217,6 +247,9 @@ See [LICENSE](LICENSE) for details.
 - **MIDI**: mido
 - **LLM**: MiniMax M2.5 coding model (default), Groq
 - **Agents**: LangGraph
+- **TUI**: Textual (Python)
+- **VST3**: JUCE 6.0.8 (C++) + FastAPI backend (Python)
+- **Build**: uv, CMake, PyInstaller, MSVC 2022
 
 ## License
 
