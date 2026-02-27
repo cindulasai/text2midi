@@ -1,0 +1,10 @@
+This is a placeholder for the installer icon file.
+
+Required: icon.ico (256x256, multi-resolution ICO file)
+Design: Musical note or keyboard icon on a dark background (Catppuccin Mocha palette)
+
+The actual .ico file should be a proper Windows icon file with the following sizes:
+- 16x16
+- 32x32
+- 48x48
+- 256x256

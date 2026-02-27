@@ -1,0 +1,7 @@
+Asset placeholder: logo.png
+
+Required: 128x128 PNG, transparent background
+Design: Musical note icon (🎵) in Catppuccin blue (#89B4FA) on transparent background
+
+This image is displayed in the plugin's title bar area.
+Replace this file with an actual logo.png before release.

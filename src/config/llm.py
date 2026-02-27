@@ -29,7 +29,7 @@ _MINIMAX_MODEL = "MiniMax-M2.5"
 class LLMConfig:
     """Runtime configuration for LLM provider selection.
 
-    Provider priority: minimax → groq.
+    Provider priority: minimax → groq → openai_custom.
     Any provider that is not configured is skipped; the next available one
     becomes the default.
     """
@@ -45,6 +45,11 @@ class LLMConfig:
     MINIMAX_API_KEY: str = os.environ.get("MINIMAX_API_KEY", "")
     GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
 
+    # OpenAI-compatible custom endpoint
+    OPENAI_CUSTOM_API_KEY: str = os.environ.get("OPENAI_CUSTOM_API_KEY", "")
+    OPENAI_CUSTOM_ENDPOINT: str = os.environ.get("OPENAI_CUSTOM_ENDPOINT", "")
+    OPENAI_CUSTOM_MODEL: str = os.environ.get("OPENAI_CUSTOM_MODEL", "gpt-4")
+
     @classmethod
     def initialize(cls) -> None:
         """Detect and register available LLM providers.
@@ -56,6 +61,9 @@ class LLMConfig:
         # Reload keys in case .env was loaded after module import
         cls.MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
         cls.GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+        cls.OPENAI_CUSTOM_API_KEY = os.environ.get("OPENAI_CUSTOM_API_KEY", "")
+        cls.OPENAI_CUSTOM_ENDPOINT = os.environ.get("OPENAI_CUSTOM_ENDPOINT", "")
+        cls.OPENAI_CUSTOM_MODEL = os.environ.get("OPENAI_CUSTOM_MODEL", "gpt-4")
 
         cls.AVAILABLE_PROVIDERS.clear()
 
@@ -76,6 +84,15 @@ class LLMConfig:
         # 2. Groq (first fallback)
         if cls.GROQ_API_KEY:
             cls.AVAILABLE_PROVIDERS.append("groq")
+
+        # 3. OpenAI-compatible custom endpoint (second fallback)
+        if cls.OPENAI_CUSTOM_API_KEY and cls.OPENAI_CUSTOM_ENDPOINT:
+            cls.AVAILABLE_PROVIDERS.append("openai_custom")
+            logger.info(
+                "[LLM Config] OpenAI-custom provider registered (endpoint=%s, model=%s)",
+                cls.OPENAI_CUSTOM_ENDPOINT,
+                cls.OPENAI_CUSTOM_MODEL,
+            )
 
         # First available provider wins the default slot
         cls.DEFAULT_PROVIDER = (
@@ -149,8 +166,9 @@ def call_llm(
             ordered.append(p)
 
     _DISPATCH = {
-        "minimax": _call_minimax,
-        "groq":    _call_groq,
+        "minimax":       _call_minimax,
+        "groq":          _call_groq,
+        "openai_custom": _call_openai_custom,
     }
 
     for attempt_provider in ordered:
@@ -231,3 +249,29 @@ def _call_groq(
         except Exception:
             continue
     return None
+
+
+def _call_openai_custom(
+    system_prompt: str,
+    user_message: str,
+    temperature: float,
+    max_tokens: int,
+) -> Optional[str]:
+    """Call an OpenAI-compatible custom endpoint (e.g. Ollama, LM Studio)."""
+    if not LLMConfig.OPENAI_CUSTOM_API_KEY or not LLMConfig.OPENAI_CUSTOM_ENDPOINT:
+        return None
+
+    client = OpenAI(
+        api_key=LLMConfig.OPENAI_CUSTOM_API_KEY,
+        base_url=LLMConfig.OPENAI_CUSTOM_ENDPOINT,
+    )
+    resp = client.chat.completions.create(
+        model=LLMConfig.OPENAI_CUSTOM_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_message},
+        ],
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+    return resp.choices[0].message.content.strip()

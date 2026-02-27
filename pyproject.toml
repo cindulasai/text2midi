@@ -27,6 +27,8 @@ dependencies = [
     "platformdirs",
     "readchar",
     "truststore>=0.10.4",
+    # TUI dependencies
+    "textual>=0.80.0",
     # MidiGen dependencies
     "langgraph>=0.1.0",
     "langchain>=0.1.0",
@@ -55,6 +57,7 @@ dev = [
     "black>=23.0",
     "ruff>=0.1",
     "mypy>=1.0",
+    "textual-dev>=1.0.0",
 ]
 
 [project.urls]
@@ -65,6 +68,7 @@ Issues = "https://github.com/spark-studio/text2midi/issues"
 
 [project.scripts]
 text2midi = "main:main"
+text2midi-tui = "main_tui:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -74,5 +78,5 @@ build-backend = "hatchling.build"
 package-mode = false
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/app", "src/agents", "src/config", "src/midigent"]
+packages = ["src/app", "src/agents", "src/config", "src/midigent", "src/tui"]
 

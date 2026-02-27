@@ -1,0 +1,9 @@
+Asset placeholder: screenshot.png
+
+Required: 800x600 (or similar) screenshot of the plugin loaded inside a DAW
+Content: Shows the text2midi VST3 plugin in Ableton Live with:
+- The prompt panel visible
+- A generated MIDI result showing tracks
+- The draggable MIDI file element
+
+This image is used in README.md. Replace with an actual screenshot before release.

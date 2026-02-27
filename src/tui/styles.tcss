@@ -1,0 +1,312 @@
+/* text2midi TUI — Catppuccin Mocha Theme */
+/* ======================================= */
+
+/* ---------- Global ---------- */
+Screen {
+    background: #1e1e2e;
+    color: #cdd6f4;
+}
+
+Header {
+    background: #181825;
+    color: #89b4fa;
+    dock: top;
+}
+
+Footer {
+    background: #181825;
+    color: #a6adc8;
+    dock: bottom;
+}
+
+/* ---------- Main Layout ---------- */
+#main-horizontal {
+    width: 100%;
+    height: 1fr;
+}
+
+#sidebar {
+    width: 26;
+    min-width: 24;
+    max-width: 32;
+    background: #181825;
+    border-right: solid #313244;
+    padding: 1;
+    overflow-y: auto;
+}
+
+#main-content {
+    width: 1fr;
+    padding: 1 2;
+    overflow-y: auto;
+}
+
+/* ---------- API Key Setup Panel ---------- */
+#api-key-setup {
+    background: #181825;
+    border: round #45475a;
+    padding: 1 2;
+    margin-bottom: 1;
+    height: auto;
+    max-height: 18;
+}
+
+#api-key-setup .title {
+    text-style: bold;
+    color: #f5c2e7;
+    margin-bottom: 1;
+}
+
+#api-key-setup Select {
+    margin-bottom: 1;
+    width: 100%;
+}
+
+#api-key-setup Input {
+    margin-bottom: 1;
+    width: 100%;
+}
+
+#api-key-setup Button {
+    margin-top: 1;
+    width: 100%;
+    background: #89b4fa;
+    color: #1e1e2e;
+    text-style: bold;
+}
+
+#api-key-setup Button:hover {
+    background: #74c7ec;
+}
+
+#api-key-setup .conditional-fields {
+    display: none;
+}
+
+#api-key-setup .conditional-fields.visible {
+    display: block;
+}
+
+/* ---------- Prompt Input Panel ---------- */
+#prompt-panel {
+    background: #181825;
+    border: round #45475a;
+    padding: 1 2;
+    margin-bottom: 1;
+    height: auto;
+}
+
+#prompt-panel .title {
+    text-style: bold;
+    color: #a6e3a1;
+    margin-bottom: 1;
+}
+
+#prompt-input {
+    height: 4;
+    margin-bottom: 1;
+    border: tall #45475a;
+    background: #1e1e2e;
+}
+
+#prompt-input:focus {
+    border: tall #89b4fa;
+}
+
+#prompt-buttons {
+    height: 3;
+    layout: horizontal;
+}
+
+#btn-generate {
+    width: 1fr;
+    background: #89b4fa;
+    color: #1e1e2e;
+    text-style: bold;
+    margin-right: 1;
+}
+
+#btn-generate:hover {
+    background: #74c7ec;
+}
+
+#btn-generate.disabled-look {
+    background: #45475a;
+    color: #6c7086;
+}
+
+#btn-surprise {
+    width: auto;
+    min-width: 16;
+    background: #f5c2e7;
+    color: #1e1e2e;
+    text-style: bold;
+}
+
+#btn-surprise:hover {
+    background: #f5e0dc;
+}
+
+/* ---------- Suggestion Carousel ---------- */
+#suggestion-carousel {
+    height: auto;
+    max-height: 3;
+    layout: horizontal;
+    overflow-x: auto;
+    margin-bottom: 1;
+    padding: 0 0;
+}
+
+.suggestion-chip {
+    background: #313244;
+    color: #cdd6f4;
+    margin: 0 1 0 0;
+    min-width: 12;
+    height: 3;
+    text-style: italic;
+    border: none;
+    padding: 0 1;
+}
+
+.suggestion-chip:hover {
+    background: #45475a;
+    color: #89b4fa;
+}
+
+/* ---------- Progress Panel ---------- */
+#progress-panel {
+    background: #181825;
+    border: round #45475a;
+    padding: 1 2;
+    margin-bottom: 1;
+    height: auto;
+    display: none;
+}
+
+#progress-panel.visible {
+    display: block;
+}
+
+#progress-panel .title {
+    text-style: bold;
+    color: #fab387;
+    margin-bottom: 1;
+}
+
+#progress-bar {
+    margin-bottom: 1;
+    color: #89b4fa;
+    background: #313244;
+}
+
+#progress-label {
+    color: #a6adc8;
+}
+
+/* ---------- Output Panel ---------- */
+#output-panel {
+    background: #181825;
+    border: round #45475a;
+    padding: 1 2;
+    margin-bottom: 1;
+    height: auto;
+    display: none;
+}
+
+#output-panel.visible {
+    display: block;
+}
+
+#output-panel .title {
+    text-style: bold;
+    color: #89b4fa;
+    margin-bottom: 1;
+}
+
+#quality-display {
+    color: #a6e3a1;
+    margin-bottom: 1;
+}
+
+#track-table {
+    height: auto;
+    max-height: 12;
+    margin-bottom: 1;
+}
+
+#output-summary {
+    margin-bottom: 1;
+    height: auto;
+    max-height: 8;
+    overflow-y: auto;
+    background: #1e1e2e;
+    padding: 1;
+    border: round #313244;
+}
+
+#output-file-path {
+    color: #f5c2e7;
+    margin-bottom: 1;
+}
+
+#output-buttons {
+    height: 3;
+    layout: horizontal;
+}
+
+#btn-open-folder {
+    background: #a6e3a1;
+    color: #1e1e2e;
+    margin-right: 1;
+}
+
+#btn-change-key {
+    background: #45475a;
+    color: #cdd6f4;
+}
+
+/* ---------- Sidebar ---------- */
+#sidebar Tree {
+    background: transparent;
+    padding: 0;
+}
+
+#sidebar .tree--cursor {
+    background: #313244;
+    color: #89b4fa;
+}
+
+#sidebar .tree--highlight {
+    background: #45475a;
+}
+
+/* ---------- Help Screen ---------- */
+#help-screen {
+    align: center middle;
+}
+
+#help-dialog {
+    width: 70;
+    height: 30;
+    background: #1e1e2e;
+    border: round #89b4fa;
+    padding: 2;
+}
+
+#help-dialog .title {
+    text-style: bold;
+    color: #89b4fa;
+    text-align: center;
+    margin-bottom: 1;
+}
+
+#help-table {
+    height: auto;
+    margin-bottom: 1;
+}
+
+#btn-close-help {
+    width: 100%;
+    background: #45475a;
+    color: #cdd6f4;
+}
