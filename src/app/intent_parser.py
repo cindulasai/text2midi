@@ -41,72 +41,65 @@ class IntentParser:
         return self._parse_with_keywords(user_input, session)
 
     def _parse_with_ai(self, user_input: str, session: Optional[CompositionSession] = None) -> Dict[str, Any]:
-        """Use AI to parse intent with session context."""
-        session_context = ""
+        """Use the LLM Intent Engine for high-accuracy parsing with session context.
+
+        Delegates to src.intent.engine.LLMIntentEngine which provides:
+          - Chain-of-thought system prompt with 8 diverse few-shot examples
+          - Pydantic v2 schema validation + musical coherence checks
+          - Auto-correction retry on validation failure
+          - Deterministic preprocessor for hard-number extraction
+        """
+        from src.intent.engine import LLMIntentEngine
+
+        # Build session context for modification detection
+        session_ctx = None
         if session and session.total_bars > 0:
             track_summary = ", ".join([t.name for t in session.tracks])
-            session_context = f"""
-CURRENT COMPOSITION:
-- Genre: {session.genre}
-- Key: {session.key} {session.mode}
-- Tempo: {session.tempo} BPM
-- Duration: {session.total_bars} bars
-- Tracks: {track_summary}
+            session_ctx = {
+                "genre": session.genre,
+                "key": session.key,
+                "scale": getattr(session, "mode", "major"),
+                "tempo": session.tempo,
+                "bars": session.total_bars,
+                "tracks": track_summary,
+                "energy": getattr(session, "energy", "medium"),
+            }
 
-Previous messages: {len(session.messages)}
-"""
-
-        system_prompt = f"""You are a music assistant. Extract parameters from natural language.
-{session_context}
-Return ONLY valid JSON:
-{{
-  "action": "<new|extend|modify|reset>",
-  "genre": "<pop|rock|electronic|lofi|jazz|classical|ambient|cinematic|funk|rnb>",
-  "mood": "<descriptive word>",
-  "tempo": <60-180 or null>,
-  "key": "<C|Dm|F#|etc or null>",
-  "energy": "<low|medium|high>",
-  "duration_bars": <8|16|32>,
-  "modify_target": "<all|melody|bass|drums|etc or null>",
-  "changes": "<description of changes or null>"
-}}
-
-Action rules:
-- "new" = fresh composition (default for first message)
-- "extend" = add more bars, add tracks ("add strings", "continue", "more bars")
-- "modify" = change existing ("make it faster", "change key", "louder drums")
-- "reset" = start over ("new song", "start fresh", "forget that")"""
-
-        result_text = call_llm(
-            system_prompt,
-            user_input,
+        engine = LLMIntentEngine()
+        parsed_intent, _enhanced, _music_intent = engine.parse(
+            user_prompt=user_input,
+            session_context=session_ctx,
             provider=session.llm_provider if session else LLMConfig.DEFAULT_PROVIDER,
-            temperature=0.3,
-            max_tokens=300
         )
-        
-        if not result_text:
-            return self._parse_with_keywords(user_input, session)
-        
-        try:
-            if "```" in result_text:
-                result_text = result_text.split("```")[1].replace("json", "").strip()
-            
-            result = json.loads(result_text)
-            
-            # Plan tracks based on parsed result
-            genre = result.get("genre", "pop")
-            if result.get("action") in ["new", "extend"]:
-                result["track_plan"] = self.track_planner.plan_tracks(user_input, genre)
-            
-            return result
 
-        except Exception as e:
-            print(f"AI parsing failed: {e}")
-            return self._parse_with_keywords(user_input, session)
+        # Convert ParsedIntent → legacy dict format expected by the TUI layer
+        result = {
+            "action": parsed_intent.action,
+            "genre": parsed_intent.genre.primary,
+            "mood": parsed_intent.mood.primary,
+            "tempo": parsed_intent.tempo.bpm,
+            "key": parsed_intent.key.root,
+            "energy": parsed_intent.energy.level,
+            "duration_bars": parsed_intent.duration.bars or 16,
+            "modify_target": None,
+            "changes": None,
+        }
+
+        # Plan tracks based on parsed result
+        genre = result["genre"]
+        if result.get("action") in ["new", "extend"]:
+            result["track_plan"] = self.track_planner.plan_tracks(user_input, genre)
+
+        return result
 
     def _parse_with_keywords(self, user_input: str, session: Optional[CompositionSession] = None) -> Dict[str, Any]:
-        """Keyword-based parsing fallback."""
+        """Keyword-based parsing fallback.
+
+        .. deprecated::
+            Prefer ``LLMIntentEngine`` from ``src.intent.engine`` (PLAN-003).
+            This method is kept only for backward-compatibility with the
+            keyword-only code path when no LLM provider is configured.
+        """
         text = user_input.lower()
         
         result = {

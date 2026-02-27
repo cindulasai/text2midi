@@ -1,7 +1,7 @@
 # 🗺️ text2midi - Complete Project Roadmap
 
 **Status:** ✅ **100% COMPLETE**  
-**Date:** February 26, 2026  
+**Date:** February 27, 2026  
 
 ---
 
@@ -172,21 +172,76 @@
 - [x] BUILDING.md (developer build instructions)
 - [x] Asset placeholders for logo and screenshots
 
+### Phase 7: LLM Intent Parsing Engine (PLAN-003) ✅
+**Duration:** February 27, 2026  
+**Status:** Complete (50/50 tests)
+
+**Schema & Type System (`src/intent/schema.py`)**
+- [x] Pydantic v2 models: ParsedIntent with 14 fields + 12 sub-models
+- [x] Per-field confidence scoring (0.0–1.0)
+- [x] Chain-of-thought reasoning field for transparency
+- [x] Musical coherence validators (tempo↔genre, energy↔dynamics, duration↔bars)
+- [x] JSON schema export for prompt embedding
+- [x] Comprehensive genre/scale/tempo-range constants
+
+**Prompt Engineering (`src/intent/prompt_templates.py`)**
+- [x] Expert-role persona (25+ years music producer)
+- [x] 5-step chain-of-thought reasoning instructions
+- [x] 10 disambiguation rules for ambiguous inputs
+- [x] 8 diverse few-shot examples (simple → complex → edge-case)
+- [x] Session context template for multi-turn conversations
+- [x] Self-correction prompt for retry/repair cycles
+- [x] Genre-aware context block with tempo/instrument/mood defaults
+
+**Preprocessor (`src/intent/preprocessor.py`)**
+- [x] Text normalization (Unicode, whitespace, casing)
+- [x] Abbreviation expansion (15+ music-domain patterns)
+- [x] Hard number extraction (tempo, duration, bars, tracks, time-sig)
+- [x] Enriched prompt builder with extracted-numbers context block
+- [x] Deterministic Stage 1 — numbers always override LLM guesses
+
+**Engine (`src/intent/engine.py`)**
+- [x] LLMIntentEngine: unified orchestrator replacing 3 legacy parsers
+- [x] LLM-first strategy with temperature=0.1, max_tokens=1500
+- [x] Automatic JSON repair (markdown fence stripping, Pydantic validation)
+- [x] Self-correction retry loop (max 1 retry with error feedback)
+- [x] Hard-number override pass (preprocessor always wins)
+- [x] Backward-compatibility bridge to EnhancedMusicIntent + MusicIntent
+- [x] Contextual keyword fallback (14 scenario rules: study→lofi, workout→electronic, etc.)
+- [x] CompositionStructure builder with proportional 4-bar phrase rounding
+
+**Integration**
+- [x] Rewrote intent_parser_node.py to use LLMIntentEngine
+- [x] Added parsed_intent to MusicState TypedDict for type safety
+- [x] Updated app/intent_parser.py to delegate _parse_with_ai to engine
+- [x] Enriched track_planner_node.py with confidence-aware instrument selection
+- [x] Confidence ≥ 0.7: preserve user instruments, skip emotion-mapper override
+
+**Testing & Validation**
+- [x] 50 unit tests: schema, validators, preprocessor, fallback, engine, prompt accuracy
+- [x] Live end-to-end validation with 5 diverse prompts
+- [x] All tests passing (0.48s)
+
+**Documentation**
+- [x] PLAN-003-INTENT-PARSING-ENGINE.md (full plan with research references)
+- [x] Updated ARCHITECTURE.md with src/intent/ package
+- [x] Updated ROADMAP.md (this section)
+
 ---
 
 ## 📊 COMPLETION METRICS
 
 ### Code Delivery
-- **Python files created:** 20+
+- **Python files created:** 25+
 - **C++ files created:** 19 (9 source pairs + PluginConfig.h)
 - **Configuration files:** 5
 - **Documentation files:** 30+
-- **Total files:** 64+
-- **Lines of code:** 7,400+
-- **Lines of documentation:** 6,000+
+- **Total files:** 69+
+- **Lines of code:** 8,800+
+- **Lines of documentation:** 6,500+
 - **Type coverage:** 100% (Python)
 - **Error handlers:** 50+
-- **Test suites:** 2 (TUI: 32 tests, Backend: 12 tests)
+- **Test suites:** 3 (TUI: 32 tests, Backend: 12 tests, Intent Engine: 50 tests)
 
 ### Architecture
 - **Agents:** 8 (all complete)

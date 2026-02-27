@@ -3,6 +3,13 @@
 Advanced Intent Parser with Semantic Understanding
 Uses chain-of-thought reasoning to deeply understand user requests.
 Maps duration requests to composition structure, complexity, and pacing.
+
+.. deprecated::
+    This module is superseded by ``src.intent.engine.LLMIntentEngine``
+    (PLAN-003). The dataclasses ``EnhancedMusicIntent``, ``CompositionStructure``,
+    and ``CompositionComplexity`` are still imported by the compatibility bridge
+    in ``src.intent.engine`` — do NOT delete this file until all downstream
+    consumers have migrated to ``ParsedIntent``.
 """
 
 import re

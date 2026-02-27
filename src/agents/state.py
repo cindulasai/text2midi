@@ -64,6 +64,7 @@ class MusicState(TypedDict, total=False):
     
     # Parsed intent (from intent agent)
     intent: Optional[MusicIntent]
+    parsed_intent: Optional[Any]  # ParsedIntent from src.intent.schema (rich Pydantic model)
     
     # Track planning (from planner agent)
     track_plan: List[TrackConfig]

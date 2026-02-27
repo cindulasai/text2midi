@@ -38,20 +38,44 @@ def track_planner_node(state: MusicState) -> MusicState:
     
     try:
         # Extract extended intent information
+        # Prefer the richer ParsedIntent when available (from LLM Intent Engine)
+        parsed_intent = state.get("parsed_intent")  # Set by new engine
         emotions = getattr(intent, 'emotions', []) or []
         style_descriptors = intent.style_descriptors or []
         specific_instruments = intent.specific_instruments or []
-        
+
+        # If the new engine stored instrument confidence data, use it to
+        # decide whether to trust user-specified instruments or let the
+        # planner choose freely.
+        instrument_confidence = 0.5
+        if parsed_intent is not None:
+            try:
+                from src.intent.schema import ParsedIntent
+                if isinstance(parsed_intent, ParsedIntent) and parsed_intent.instruments:
+                    min_conf = min(
+                        (inst.priority / 10.0 for inst in parsed_intent.instruments),
+                        default=0.5,
+                    )
+                    instrument_confidence = min_conf
+            except ImportError:
+                pass
+
         print(f"   Emotions: {emotions if emotions else 'Not specified'}")
         print(f"   Styles: {style_descriptors if style_descriptors else 'Not specified'}")
-        
+        if instrument_confidence >= 0.7:
+            print(f"   Instruments: high-confidence user request → preserving")
+        else:
+            print(f"   Instruments: low-confidence → planner may override")
+
         if LLMConfig.DEFAULT_PROVIDER:
             track_plan = _plan_tracks_with_ai(intent)
         else:
             track_plan = _plan_tracks_with_rules(intent)
         
-        # Enhance with emotion-aware instruments if available
-        if EMOTION_MAPPER_AVAILABLE and (emotions or style_descriptors):
+        # Enhance with emotion-aware instruments if available.
+        # Skip emotion override when user explicitly specified instruments
+        # with high confidence (the LLM Intent Engine already validated them).
+        if EMOTION_MAPPER_AVAILABLE and (emotions or style_descriptors) and instrument_confidence < 0.7:
             track_plan = _enhance_with_emotion_instruments(
                 track_plan, 
                 intent.genre,
@@ -59,6 +83,8 @@ def track_planner_node(state: MusicState) -> MusicState:
                 style_descriptors,
                 specific_instruments
             )
+        elif specific_instruments and instrument_confidence >= 0.7:
+            print("   ✓ Keeping user-specified instruments (high confidence)")
         
         # Ensure track count matches request
         if intent.track_count and len(track_plan) != intent.track_count:

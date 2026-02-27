@@ -15,13 +15,20 @@ text2midi/
 │   │   ├── generator.py        # Music generation logic (MusicGenerator)
 │   │   ├── midi_creator.py     # MIDI file creation (MIDIGenerator)
 │   │   ├── track_planner.py    # Track planning engine (TrackPlanner)
-│   │   ├── intent_parser.py    # NLP intent parsing (IntentParser)
+│   │   ├── intent_parser.py    # TUI intent parsing (delegates to LLM Intent Engine)
 │   │   └── session.py          # Session management utilities
+│   │
+│   ├── intent/                 # LLM Intent Parsing Engine (PLAN-003)
+│   │   ├── __init__.py
+│   │   ├── schema.py           # Pydantic v2 models (ParsedIntent + sub-schemas)
+│   │   ├── prompt_templates.py # Chain-of-thought system prompt + 8 few-shot examples
+│   │   ├── preprocessor.py     # Deterministic text normalization + number extraction
+│   │   └── engine.py           # LLMIntentEngine — unified orchestrator
 │   │
 │   ├── agents/                 # LangGraph agentic architecture
 │   │   ├── graph.py            # Main compiled agent graph
 │   │   ├── state.py            # MusicState TypedDict (25+ fields)
-│   │   ├── intent_parser_node.py
+│   │   ├── intent_parser_node.py   # Uses LLMIntentEngine
 │   │   ├── track_planner_node.py
 │   │   ├── theory_validator_node.py
 │   │   ├── track_generator_node.py
@@ -32,6 +39,7 @@ text2midi/
 │   │
 │   ├── midigent/               # Advanced music generation engines
 │   │   ├── advanced_generator.py
+│   │   ├── advanced_intent_parser.py  # Legacy (deprecated, kept for compat)
 │   │   ├── emotion_engine.py
 │   │   ├── music_theory_engine.py
 │   │   ├── creative_variation_engine.py
@@ -44,6 +52,7 @@ text2midi/
 │       └── __init__.py
 │
 ├── tests/                      # Test suite
+│   ├── test_intent_engine.py   # Intent engine tests (50 cases)
 │   └── midi_generation/        # MIDI generation evaluation tests
 │
 └── outputs/                    # Generated MIDI files (gitignored)
@@ -57,10 +66,15 @@ The LangGraph state machine processes each user request through a pipeline:
 User Input
     │
     ▼
-[Intent Parser] ──► Parse genre, tempo, mood, instruments, duration
+[Intent Parser] ──► LLM Intent Engine (chain-of-thought + Pydantic validation)
+    │                 ├─ Preprocessor: normalize text, extract hard numbers
+    │                 ├─ LLM call: 8 few-shot examples, temp=0.1, 1500 tokens
+    │                 ├─ Validation: Pydantic v2 schema + coherence checks
+    │                 ├─ Retry: auto-correction on validation failure (max 1)
+    │                 └─ Fallback: enhanced keyword parser (no LLM needed)
     │
     ▼
-[Track Planner] ──► Determine number of tracks, assign instruments
+[Track Planner] ──► Determine tracks, assign instruments (respects confidence)
     │
     ▼
 [Theory Validator] ──► Validate music theory correctness
@@ -108,6 +122,7 @@ User text → MusicIntent → MusicState → [Agent Pipeline] → GenerationSnap
 
 Key types in `src/app/models.py`:
 - `MusicIntent` — parsed intent (genre, tempo, mood, instruments)
+- `ParsedIntent` — rich Pydantic model from LLM Intent Engine (confidence-scored)
 - `TrackConfig` — per-track configuration (instrument, channel, notes)
 - `Note` — individual note (pitch, duration, velocity, channel)
 - `GenerationSnapshot` — immutable record of a completed generation
