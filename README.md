@@ -146,45 +146,16 @@ docs/                      # Documentation
 
 ## 🏗️ Architecture
 
-> How text becomes music — a high-level view of the text2midi pipeline.
-
 ```mermaid
-flowchart TD
-    A["🎤 User Prompt"] --> B{"Interface"}
-    B -->|Terminal| C["TUI — Textual"]
-    B -->|Browser| D["Web UI — Gradio"]
-
-    C --> E["LLM Intent Engine"]
-    D --> E
-
-    subgraph agents ["LangGraph Agent Pipeline"]
-        direction TB
-        E -->|"ParsedIntent"| F["Track Planner"]
-        F --> G["Theory Validator"]
-        G --> H["Track Generator"]
-        H --> I{"Quality Control"}
-        I -- "Score ≥ 70" --> J["MIDI Creator"]
-        I -. "Score < 70" .-> K["Refinement"]
-        K -.-> H
-    end
-
-    E <-->|API| L["LLM Providers\nGroq · OpenAI · Claude\nGemini · Ollama · 15+"]
-
-    J --> M["Session Summary"]
-    M --> N["🎵 .mid File\noutputs/"]
-
-    subgraph config ["Config & Security"]
-        direction LR
-        O["OS Keyring"] ~~~ P["Settings\nCtrl+S"]
-    end
-
-    config -.- E
-
-    style agents fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4
-    style config fill:#1e1e2e,stroke:#a6e3a1,stroke-width:1px,color:#cdd6f4
+flowchart LR
+    A["🎤 Describe your music"] --> B["🤖 AI Understands Intent"]
+    B --> C["🎼 Compose & Validate"]
+    C --> D["🎵 MIDI File"]
 ```
 
-📖 *For the full technical deep-dive, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).*
+> **You speak, AI composes.** Type a description → AI parses your intent using 15+ LLM providers → LangGraph agents plan tracks, apply music theory, and generate notes → a ready-to-use MIDI file lands in `outputs/`.
+
+📖 *Full technical details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).*
 
 ## 🚀 Usage
 
