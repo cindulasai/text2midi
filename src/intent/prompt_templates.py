@@ -13,11 +13,50 @@ The system prompt follows proven patterns from:
 
 from __future__ import annotations
 
-# ---- Supported values (mirrored for prompt embedding) --------------------
+from src.config.genre_registry import (
+    GENRE_TREE,
+    SCALES_EXTENDED,
+    get_root_genres,
+    get_children,
+)
 
-_SUPPORTED_GENRES = "pop, rock, electronic, lofi, jazz, classical, ambient, cinematic, funk, rnb"
+# ---- Supported values (dynamically built from registry) -------------------
 
-_SUPPORTED_SCALES = "major, minor, dorian, mixolydian, pentatonic_major, pentatonic_minor, blues, harmonic_minor"
+
+def _build_supported_genres_str() -> str:
+    """Build a comma-separated list of root genres for prompt embedding."""
+    roots = sorted(n.id for n in get_root_genres())
+    return ", ".join(roots)
+
+
+def _build_supported_scales_str() -> str:
+    """Build a comma-separated list of all scale names."""
+    return ", ".join(sorted(SCALES_EXTENDED.keys()))
+
+
+def _build_genre_context() -> str:
+    """Build the genre reference block with all root + sub-genres."""
+    lines = ["Genre reference (root genres with typical BPM and character):"]
+    for node in sorted(get_root_genres(), key=lambda n: n.id):
+        lo, hi = node.tempo_range
+        lines.append(
+            f"  {node.id:<14s} {lo}–{hi} BPM, {node.default_scale}, "
+            f"{node.energy} energy, {node.typical_tracks} tracks"
+        )
+        children = sorted(get_children(node.id), key=lambda n: n.id)
+        for child in children[:5]:  # Show up to 5 sub-genres to keep prompt size reasonable
+            clo, chi = child.tempo_range
+            lines.append(
+                f"    {child.id:<24s} {clo}–{chi} BPM, {child.default_scale}"
+            )
+        if len(children) > 5:
+            lines.append(f"    ... and {len(children) - 5} more sub-genres")
+    return "\n".join(lines)
+
+
+_SUPPORTED_GENRES = _build_supported_genres_str()
+
+_SUPPORTED_SCALES = _build_supported_scales_str()
 
 _SUPPORTED_ACTIONS = "new, extend, modify, analyze"
 
@@ -31,20 +70,9 @@ _INSTRUMENT_ROLES = "melody, harmony, bass, rhythm, pad, lead, arpeggio, fx"
 
 _DYNAMICS_ARCS = "flat, build, decay, wave, dynamic"
 
-# ---- Genre context block --------------------------------------------------
+# ---- Genre context block (dynamically generated) -------------------------
 
-_GENRE_CONTEXT = """\
-Genre reference (typical BPM ranges and default character):
-  pop:        100–130 BPM, major, medium energy, 4 tracks
-  rock:       110–140 BPM, minor, high energy, 5 tracks
-  electronic: 120–135 BPM, minor, high energy, 6 tracks
-  lofi:       70–90 BPM,  minor, low energy, 4 tracks
-  jazz:       80–140 BPM, dorian, medium energy, 5 tracks
-  classical:  60–120 BPM, major, medium energy, 4 tracks
-  ambient:    60–80 BPM,  major, low energy, 3 tracks
-  cinematic:  70–100 BPM, minor, high energy, 7 tracks
-  funk:       95–115 BPM, mixolydian, high energy, 5 tracks
-  rnb:        70–100 BPM, minor, medium energy, 5 tracks"""
+_GENRE_CONTEXT = _build_genre_context()
 
 # ---- Few-shot examples (8 diverse cases) ---------------------------------
 # Each example shows chain-of-thought reasoning → structured JSON output.
@@ -316,6 +344,38 @@ _FEW_SHOT_EXAMPLES = r"""
 </assistant_output>
 </example>
 
+<example id="11" category="multi-track-request">
+<user_prompt>create 5 track and 8 channel of 5 minutes length a peaceful meditative ambient soundscape with floating pads and soft bells</user_prompt>
+<assistant_output>
+{
+  "reasoning": "User explicitly requests 5 tracks and 8 channels — extract into track_channel. Duration = 5 minutes = 300 seconds. Genre = ambient (explicit). Mood = peaceful, meditative. Energy = very_low to low. Instruments: 'floating pads' = synth_pad, 'soft bells' = bells. User wants a soundscape, implying textural/atmospheric production. At ~70 BPM (ambient default), 300s = ceil(300*70/60/4) = 88 bars. Since 8 channels > 5 tracks, set track_count = 8 to match. The instrument list should reflect the requested tracks.",
+  "action": "new",
+  "genre": {"primary": "ambient", "secondary": null, "confidence": 0.95},
+  "mood": {"primary": "peaceful", "secondary": "meditative", "valence": 0.4, "confidence": 0.95},
+  "energy": {"level": "very_low", "confidence": 0.9},
+  "tempo": {"bpm": 70, "source": "genre_default", "confidence": 0.6},
+  "key": {"root": "C", "scale": "major", "confidence": 0.4},
+  "duration": {"bars": 88, "seconds": 300, "descriptor": "long", "confidence": 0.95},
+  "track_channel": {"track_count": 8, "channel_count": 8, "confidence": 0.95},
+  "instruments": [
+    {"name": "synth_pad", "role": "pad", "priority": 9},
+    {"name": "bells", "role": "melody", "priority": 8},
+    {"name": "strings", "role": "harmony", "priority": 7},
+    {"name": "piano", "role": "harmony", "priority": 6},
+    {"name": "choir", "role": "pad", "priority": 5},
+    {"name": "harp", "role": "melody", "priority": 5},
+    {"name": "synth_lead", "role": "lead", "priority": 4},
+    {"name": "fx_atmosphere", "role": "fx", "priority": 4}
+  ],
+  "dynamics": {"intensity": "gentle", "arc": "wave"},
+  "structure": {"has_intro": true, "has_verse": true, "has_chorus": false, "has_bridge": false, "has_outro": true, "form_hint": "flowing ambient sections"},
+  "production": {"descriptors": ["spacious", "reverb-heavy", "atmospheric", "ethereal"], "complexity": "moderate"},
+  "reference": null,
+  "overall_confidence": 0.88
+}
+</assistant_output>
+</example>
+
 </examples>"""
 
 
@@ -336,9 +396,14 @@ When the prompt is ambiguous, apply these resolution rules in order:
 
 4. COMPOUND PHRASES: Parse multi-word descriptors holistically:
    - "dark ambient" → genre=ambient, mood=dark (not genre=pop with mood=dark+ambient)
-   - "jazz fusion" → genre=jazz, secondary=electronic or funk (not just jazz)
+   - "jazz fusion" → genre=jazz.fusion (not just jazz)
    - "lo-fi hip hop" → genre=lofi (not genre=pop with style=lo-fi)
    - "hard rock" → genre=rock, energy=high (not two separate genres)
+   - "afrobeat" → genre=african.afrobeat
+   - "bossa nova" → genre=jazz.bossa_nova
+   - "k-pop" → genre=pop.kpop
+   - "reggaeton" → genre=latin.reggaeton
+   - Use dot-notation for sub-genres (e.g. "electronic.house", "folk.celtic")
 
 5. REFERENCE EXTRACTION: When users mention artists or songs, extract them into the
    reference field AND use them to infer genre, mood, energy. Examples:
@@ -360,6 +425,9 @@ When the prompt is ambiguous, apply these resolution rules in order:
 
 9. SCALE INFERENCE: If user says "minor" without specifying which → use "minor" (natural minor).
    If user says "bluesy" → scale=blues. "Jazzy" without more context → scale=dorian.
+   For world music: "Arabic" → scale=hijaz or double_harmonic. "Indian" → scale=raga_bhairav.
+   "Japanese" → scale=japanese_in. "Flamenco" → scale=phrygian_dominant.
+   Supported scales include: {_SUPPORTED_SCALES}
 
 10. CONFIDENCE SCORING: Set confidence based on evidence strength:
     - 0.9–1.0: User explicitly stated the value
@@ -367,6 +435,14 @@ When the prompt is ambiguous, apply these resolution rules in order:
     - 0.5–0.7: Genre default / moderate inference
     - 0.3–0.5: Weak inference or ambiguous context
     - 0.0–0.3: Pure guess / no evidence
+
+11. TRACK AND CHANNEL COUNT: If the user specifies a number of tracks (e.g., "5 tracks",
+    "create 5 track", "3-track") or channels (e.g., "8 channels"), extract them into
+    track_channel.track_count and track_channel.channel_count respectively.
+    track_count = how many instrument tracks to generate (1–16).
+    channel_count = how many MIDI channels to assign (1–16).
+    If the user asks for more channels than tracks, set track_count = channel_count.
+    When not specified, set both to null with low confidence.
 </disambiguation_rules>"""
 
 
@@ -421,6 +497,7 @@ Return ONLY a single valid JSON object with these fields (no markdown, no code f
   "tempo": {{"bpm": <30-300>, "source": "<explicit|inferred|genre_default>", "confidence": <0.0-1.0>}},
   "key": {{"root": "<note or null>", "scale": "<scale>", "confidence": <0.0-1.0>}},
   "duration": {{"bars": <int or null>, "seconds": <int or null>, "descriptor": "<short|medium|long|very_long or null>", "confidence": <0.0-1.0>}},
+  "track_channel": {{"track_count": <int 1-16 or null>, "channel_count": <int 1-16 or null>, "confidence": <0.0-1.0>}},
   "instruments": [
     {{"name": "<instrument>", "role": "<role>", "priority": <1-10>}}
   ],
@@ -441,6 +518,7 @@ Return ONLY a single valid JSON object with these fields (no markdown, no code f
 - Use null (not "null" or "") for absent optional values.
 - Instrument names should match General MIDI names where possible (piano, electric_bass, strings, synth_pad, drums, etc.).
 - If the prompt is extremely vague (e.g., "play something"), default to pop genre, medium energy, and score confidence LOW (0.3-0.4).
+- If the user specifies a number of tracks or channels, extract them into the "track_channel" object. Set track_count = channel_count when channels > tracks.
 - When the user is modifying an existing composition, focus on WHAT CHANGED. Set action="modify" and assign high confidence only to changed fields.
 </final_reminders>"""
 

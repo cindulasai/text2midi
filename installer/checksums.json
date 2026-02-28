@@ -1,0 +1,15 @@
+{
+    "_comment": "SHA-256 checksums for downloaded installers — update when bumping versions",
+    "python_windows_amd64": {
+        "url": "https://www.python.org/ftp/python/3.12.8/python-3.12.8-amd64.exe",
+        "sha256": "UPDATE_WITH_REAL_HASH",
+        "size_min_bytes": 24000000,
+        "size_max_bytes": 28000000
+    },
+    "python_windows_arm64": {
+        "url": "https://www.python.org/ftp/python/3.12.8/python-3.12.8-arm64.exe",
+        "sha256": "UPDATE_WITH_REAL_HASH",
+        "size_min_bytes": 24000000,
+        "size_max_bytes": 28000000
+    }
+}

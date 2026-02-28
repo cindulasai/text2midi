@@ -40,9 +40,7 @@ from typing import Optional
 
 import pytest
 
-# ── Path bootstrap (handled by conftest.py but safe to repeat) ───────────────
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(_REPO_ROOT))
 
 from tests.midi_generation.evaluator import MidiEvaluator
 from tests.midi_generation.test_cases import TEST_CASES, TestCase

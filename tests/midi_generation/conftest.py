@@ -11,9 +11,7 @@ import uuid
 import pytest
 from pathlib import Path
 
-# ── Bootstrap ────────────────────────────────────────────────────────────────
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(_REPO_ROOT))
 
 try:
     from dotenv import load_dotenv

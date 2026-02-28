@@ -30,7 +30,7 @@ def intent_parser_node(state: MusicState) -> MusicState:
       5. Enrichment + conversion to legacy types for downstream compatibility
       6. Keyword fallback when no LLM provider is configured
     """
-    print("\n[INTENT AGENT] Analyzing user request with LLM Intent Engine...")
+    logger.info("\n[INTENT AGENT] Analyzing user request with LLM Intent Engine...")
 
     user_prompt = state.get("user_prompt", "")
 
@@ -43,11 +43,11 @@ def intent_parser_node(state: MusicState) -> MusicState:
 
         # Display chain-of-thought reasoning
         if parsed_intent.reasoning:
-            print("\nPARSING REASONING (chain-of-thought):")
+            logger.info("\nPARSING REASONING (chain-of-thought):")
             # Reasoning is a single string; show first ~500 chars
             reasoning_preview = parsed_intent.reasoning[:500]
             for line in reasoning_preview.split(". "):
-                print(f"   {line.strip()}")
+                logger.info("   %s", line.strip())
 
         # Store in state
         state["intent"] = music_intent
@@ -56,19 +56,19 @@ def intent_parser_node(state: MusicState) -> MusicState:
         state["composition_structure"] = enhanced_intent.composition_structure
 
         # Summary
-        print(f"\n[OK] INTENT PARSED: Genre={music_intent.genre} | Energy={music_intent.energy}")
-        print(f"   Tempo: {enhanced_intent.tempo_preference} BPM")
-        print(f"   Duration: {enhanced_intent.duration_bars} bars ({enhanced_intent.duration_seconds}s)")
-        print(f"   Complexity: {enhanced_intent.complexity.value}")
-        print(f"   Instruments: {', '.join(enhanced_intent.specific_instruments) or 'auto'}")
-        print(f"   Confidence: {parsed_intent.overall_confidence:.0%}")
+        logger.info("\n[OK] INTENT PARSED: Genre=%s | Energy=%s", music_intent.genre, music_intent.energy)
+        logger.info("   Tempo: %s BPM", enhanced_intent.tempo_preference)
+        logger.info("   Duration: %s bars (%ss)", enhanced_intent.duration_bars, enhanced_intent.duration_seconds)
+        logger.info("   Complexity: %s", enhanced_intent.complexity.value)
+        logger.info("   Instruments: %s", ', '.join(enhanced_intent.specific_instruments) or 'auto')
+        logger.info("   Confidence: %.0f%%", parsed_intent.overall_confidence * 100)
 
         cs = enhanced_intent.composition_structure
-        print(f"   Structure: I:{cs.intro_bars} V:{cs.verse_bars} C:{cs.chorus_bars} B:{cs.bridge_bars} O:{cs.outro_bars}")
+        logger.info("   Structure: I:%s V:%s C:%s B:%s O:%s", cs.intro_bars, cs.verse_bars, cs.chorus_bars, cs.bridge_bars, cs.outro_bars)
 
     except Exception as e:
         logger.exception("[INTENT AGENT] Parsing failed")
         state["error"] = f"Intent parsing failed: {str(e)}"
-        print(f"[ERROR] Error: {state['error']}")
+        logger.error("[ERROR] Error: %s", state['error'])
 
     return state

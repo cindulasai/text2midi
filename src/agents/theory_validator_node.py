@@ -3,8 +3,12 @@
 Music Theory Validator Node: Validate harmonic and melodic choices.
 """
 
-from typing import List
-from src.agents.state import MusicState, TrackConfig
+import logging
+
+from src.agents.state import MusicState
+from src.config.genre_registry import get_genre_instruments
+
+logger = logging.getLogger(__name__)
 
 
 def music_theory_validator_node(state: MusicState) -> MusicState:
@@ -12,7 +16,7 @@ def music_theory_validator_node(state: MusicState) -> MusicState:
     Agent Node: Validate harmonic, melodic, and rhythmic choices.
     Ensures the planned tracks follow music theory principles.
     """
-    print("\n[THEORY] [MUSIC THEORY VALIDATOR] Validating musical choices...")
+    logger.info("\n[THEORY] [MUSIC THEORY VALIDATOR] Validating musical choices...")
     
     if state.get("error"):
         return state
@@ -28,10 +32,10 @@ def music_theory_validator_node(state: MusicState) -> MusicState:
     try:
         issues = []
         
-        # Check 1: Genre-appropriate instruments
-        genre_instruments = _get_genre_instruments(intent.genre)
+        # Check 1: Genre-appropriate instruments (uses genre registry as SSOT)
+        known_instruments = {name for name, _, _ in get_genre_instruments(intent.genre)}
         for track in track_plan:
-            if track.instrument not in genre_instruments and track.track_type != "drums":
+            if track.instrument not in known_instruments and track.track_type != "drums":
                 issues.append(
                     f"Instrument '{track.instrument}' unusual for {intent.genre} genre"
                 )
@@ -69,33 +73,16 @@ def music_theory_validator_node(state: MusicState) -> MusicState:
         }
         
         if state["theory_valid"]:
-            print("[OK] All music theory checks passed")
+            logger.info("[OK] All music theory checks passed")
         else:
-            print(f"[WARN] Theory issues found ({len(issues)})")
+            logger.warning("[WARN] Theory issues found (%d)", len(issues))
             for issue in issues[:3]:
-                print(f"   - {issue}")
+                logger.warning("   - %s", issue)
             if len(issues) > 3:
-                print(f"   ... and {len(issues) - 3} more")
+                logger.warning("   ... and %d more", len(issues) - 3)
         
     except Exception as e:
         state["error"] = f"Theory validation failed: {str(e)}"
         state["theory_valid"] = False
     
     return state
-
-
-def _get_genre_instruments(genre: str) -> set:
-    """Get typical instruments for a genre."""
-    genre_instruments = {
-        "pop": {"piano", "electric_guitar", "electric_bass", "drums", "synth_lead", "synth_pad"},
-        "rock": {"electric_guitar", "electric_bass", "drums", "piano", "violin"},
-        "jazz": {"piano", "saxophone", "trumpet", "electric_bass", "drums", "vibraphone"},
-        "classical": {"piano", "violin", "cello", "flute", "orchestra_strings"},
-        "electronic": {"synth_lead", "synth_bass", "synth_pad", "drums", "electric_guitar"},
-        "lofi": {"piano", "electric_guitar", "acoustic_bass", "drums", "synth_pad"},
-        "ambient": {"synth_pad", "piano", "strings", "fx_atmosphere"},
-        "cinematic": {"orchestra_strings", "brass", "piano", "drums", "choir"},
-        "funk": {"electric_bass", "drums", "electric_guitar", "synth_lead", "saxophone"},
-        "rnb": {"electric_piano", "electric_bass", "drums", "synth_pad", "vocal_choir"},
-    }
-    return genre_instruments.get(genre, {"piano", "guitar", "bass", "drums"})

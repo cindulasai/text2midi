@@ -20,14 +20,7 @@ class Note:
     channel: int = 0
 
 
-@dataclass
-class TrackConfig:
-    """Configuration for a single track."""
-    track_type: str  # lead, counter_melody, harmony, bass, drums, arpeggio, pad, fx
-    instrument: str
-    role: str
-    priority: int = 1
-    channel: int = 0
+from src.agents.state import TrackConfig  # canonical definition in agents/state.py
 
 
 @dataclass

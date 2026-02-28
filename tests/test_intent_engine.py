@@ -38,6 +38,7 @@ from src.intent.schema import (
     ProductionStyle,
     StructureInfo,
     TempoInfo,
+    TrackChannelInfo,
 )
 from src.intent.engine import LLMIntentEngine, _fallback_keyword_parse
 
@@ -93,11 +94,18 @@ class TestParsedIntentSchema:
         assert len(intent.instruments) == 2
 
     def test_invalid_genre_rejected(self):
-        """An unsupported genre value should fail validation."""
-        with pytest.raises(Exception):
-            ParsedIntent.model_validate({
-                "genre": {"primary": "dubstep", "confidence": 0.9},
-            })
+        """An unsupported genre value should fallback to 'pop'."""
+        intent = ParsedIntent.model_validate({
+            "genre": {"primary": "zzz_nonexistent_genre", "confidence": 0.9},
+        })
+        assert intent.genre.primary == "pop", "Unknown genre should fallback to pop"
+
+    def test_dubstep_resolves_to_subgenre(self):
+        """Dubstep should resolve to electronic.dubstep via alias."""
+        intent = ParsedIntent.model_validate({
+            "genre": {"primary": "dubstep", "confidence": 0.9},
+        })
+        assert intent.genre.primary == "electronic.dubstep"
 
     def test_invalid_energy_rejected(self):
         """An unsupported energy level should fail validation."""
@@ -250,7 +258,7 @@ class TestKeywordFallback:
 
     def test_genre_detection_jazz(self):
         result = self._run_fallback("smooth jazz quartet")
-        assert result.genre.primary == "jazz"
+        assert result.genre.primary == "jazz.smooth"
 
     def test_genre_detection_ambient(self):
         result = self._run_fallback("ambient soundscape")
@@ -413,8 +421,8 @@ class TestLLMIntentEngine:
         """When first LLM response is invalid, engine retries once."""
         mock_config.AVAILABLE_PROVIDERS = ["minimax"]
 
-        # First call returns invalid JSON, second call returns valid
-        invalid_response = '{"genre": {"primary": "dubstep"}}'  # invalid genre
+        # First call returns invalid JSON (missing required structure), second call returns valid
+        invalid_response = '{"genre": {"primary": "pop"}, "energy": {"level": "INVALID_LEVEL"}}'
         valid_response = self._make_valid_llm_response()
         mock_call_llm.side_effect = [invalid_response, valid_response]
 
@@ -482,7 +490,8 @@ class TestPromptAccuracy:
 
     def test_compound_dark_ambient(self):
         result = self._parse("dark ambient drone")
-        assert result.genre.primary == "ambient"
+        # "dark ambient" maps to cinematic.dark_ambient sub-genre
+        assert result.genre.primary in ("ambient", "cinematic.dark_ambient")
         assert result.mood.primary == "dark"
 
     def test_compound_hard_rock(self):
@@ -519,10 +528,169 @@ class TestPromptAccuracy:
 
     def test_tempo_from_bpm(self):
         result = self._parse("funky groove at 105 bpm")
-        assert result.genre.primary == "funk"
+        assert result.genre.primary in ("funk", "rnb.funk")
         assert result.tempo.bpm == 105
 
     def test_key_with_flat(self):
         result = self._parse("ballad in Eb minor")
         assert result.key.root is not None
         assert result.key.scale == "minor"
+
+
+# =====================================================================
+# SECTION 6: Track Count / Channel Count Tests
+# =====================================================================
+
+
+class TestTrackChannelExtraction:
+    """Test that explicit track count and channel count requests are extracted
+    and propagated correctly through the full pipeline."""
+
+    def _parse(self, text: str) -> ParsedIntent:
+        preprocessed = preprocess(text)
+        return _fallback_keyword_parse(preprocessed.normalized, preprocessed)
+
+    # --- Preprocessor extraction ---
+
+    def test_track_count_extracted(self):
+        result = preprocess("create 5 track ambient piece")
+        assert result.extracted.track_count == 5
+
+    def test_channel_count_extracted(self):
+        result = preprocess("8 channel ambient soundscape")
+        assert result.extracted.channel_count == 8
+
+    def test_both_track_and_channel_extracted(self):
+        result = preprocess("5 track and 8 channel ambient piece")
+        assert result.extracted.track_count == 5
+        assert result.extracted.channel_count == 8
+
+    def test_track_count_hyphenated(self):
+        result = preprocess("a 3-track lofi beat")
+        assert result.extracted.track_count == 3
+
+    def test_channel_count_bounds(self):
+        """Channel counts > 16 should be ignored."""
+        result = preprocess("32 channel ambient piece")
+        assert result.extracted.channel_count is None
+
+    def test_track_count_bounds(self):
+        """Track counts > 16 should be ignored."""
+        result = preprocess("20 track ambient piece")
+        assert result.extracted.track_count is None
+
+    # --- Duration extraction improvements ---
+
+    def test_duration_unusual_word_order(self):
+        """'N minutes length' should be extracted."""
+        result = preprocess("5 minutes length ambient")
+        assert result.extracted.duration_seconds == 300
+
+    def test_duration_of_n_minutes(self):
+        """'of N minutes' should be extracted."""
+        result = preprocess("of 3 minutes ambient piece")
+        assert result.extracted.duration_seconds == 180
+
+    # --- Fallback parser propagation ---
+
+    def test_fallback_sets_track_channel(self):
+        result = self._parse("create 5 track ambient piece")
+        assert result.track_channel.track_count == 5
+        assert result.track_channel.confidence >= 0.9
+
+    def test_fallback_sets_channel_count(self):
+        result = self._parse("8 channel ambient soundscape")
+        assert result.track_channel.channel_count == 8
+
+    def test_fallback_detects_bells(self):
+        """'bells' should be found as an instrument."""
+        result = self._parse("ambient with soft bells")
+        names = [i.name for i in result.instruments]
+        assert "bells" in names
+
+    def test_fallback_detects_choir(self):
+        result = self._parse("ambient with choir and strings")
+        names = [i.name for i in result.instruments]
+        assert "choir" in names
+        assert "strings" in names
+
+    def test_fallback_detects_harp(self):
+        result = self._parse("ambient with gentle harp")
+        names = [i.name for i in result.instruments]
+        assert "harp" in names
+
+    def test_fallback_no_duplicate_instruments(self):
+        """'pad' and 'synth' should not create duplicate synth_pad entries."""
+        result = self._parse("ambient with synth pad sounds")
+        names = [i.name for i in result.instruments]
+        assert names.count("synth_pad") == 1
+
+    # --- Bridge propagation ---
+
+    def test_bridge_track_count_from_track_channel(self):
+        """_intent_to_music_intent should use track_channel.track_count."""
+        from src.intent.engine import _intent_to_music_intent
+
+        parsed = ParsedIntent(
+            reasoning="test",
+            action="new",
+            genre=GenreInfo(primary="ambient", confidence=0.8),
+            mood=MoodInfo(primary="calm", confidence=0.5),
+            energy=EnergyInfo(level="low", confidence=0.5),
+            tempo=TempoInfo(bpm=70, source="genre_default", confidence=0.5),
+            key=KeyInfo(root="C", scale="major", confidence=0.3),
+            duration=DurationInfo(bars=32, confidence=0.5),
+            track_channel=TrackChannelInfo(track_count=5, channel_count=8, confidence=0.95),
+            instruments=[
+                InstrumentRequest(name="synth_pad", role="pad", priority=8),
+                InstrumentRequest(name="bells", role="melody", priority=7),
+            ],
+            dynamics=DynamicsInfo(intensity="gentle", arc="flat"),
+            structure=StructureInfo(),
+            production=ProductionStyle(complexity="moderate"),
+            overall_confidence=0.7,
+        )
+        music_intent = _intent_to_music_intent(parsed, "test prompt")
+        assert music_intent.track_count == 5
+
+    def test_bridge_track_count_falls_back_to_instruments(self):
+        """When track_channel has no count, fall back to len(instruments)."""
+        from src.intent.engine import _intent_to_music_intent
+
+        parsed = ParsedIntent(
+            reasoning="test",
+            action="new",
+            genre=GenreInfo(primary="ambient", confidence=0.8),
+            mood=MoodInfo(primary="calm", confidence=0.5),
+            energy=EnergyInfo(level="low", confidence=0.5),
+            tempo=TempoInfo(bpm=70, source="genre_default", confidence=0.5),
+            key=KeyInfo(root="C", scale="major", confidence=0.3),
+            duration=DurationInfo(bars=32, confidence=0.5),
+            instruments=[
+                InstrumentRequest(name="synth_pad", role="pad", priority=8),
+                InstrumentRequest(name="bells", role="melody", priority=7),
+                InstrumentRequest(name="strings", role="harmony", priority=6),
+            ],
+            dynamics=DynamicsInfo(intensity="gentle", arc="flat"),
+            structure=StructureInfo(),
+            production=ProductionStyle(complexity="moderate"),
+            overall_confidence=0.7,
+        )
+        music_intent = _intent_to_music_intent(parsed, "test prompt")
+        assert music_intent.track_count == 3
+
+    # --- End-to-end: user's exact bug-report prompt ---
+
+    def test_user_bug_report_prompt(self):
+        """The exact prompt that triggered the bug should now produce >=5 tracks."""
+        text = "create 5 track and 8 channel of 5 minutes length a peaceful meditative ambient soundscape with floating pads and soft bells"
+        result = self._parse(text)
+        assert result.genre.primary == "ambient"
+        assert result.track_channel.track_count is not None
+        assert result.track_channel.track_count >= 5
+        assert result.track_channel.channel_count == 8
+        assert result.duration.seconds == 300
+        # Should detect both pads and bells
+        names = [i.name for i in result.instruments]
+        assert "synth_pad" in names
+        assert "bells" in names

@@ -10,63 +10,126 @@ text2midi is an AI-powered music composition engine that:
 - Supports 10+ music genres (pop, rock, classical, electronic, lo-fi, jazz, etc.)
 - Outputs standard MIDI files compatible with any DAW
 - Evolves compositions through multi-turn conversations
+- Works with **15+ AI providers** — use whichever you already have
 
-## 🚀 Quick Start (5 minutes)
+## 🚀 Quick Start (30 seconds)
 
-### Step 1: Installation
+### Step 1: Install
 
 ```bash
-# Clone or navigate to the project
 cd text2midi
-
-# Install dependencies with uv (recommended)
-uv sync
-
-# Or with pip
-pip install -r requirements.txt
+uv sync          # or: pip install -r requirements.txt
 ```
 
-### Step 2: Set Up Your API Key
-
-text2midi uses **MiniMax M2.5** as its default AI model. Copy `.env.example` to `.env` and add your key:
-
-```bash
-cp .env.example .env
-```
-
-Then open `.env` and fill in at least one key:
-
-```
-MINIMAX_API_KEY=your-key-here    # ⭐ Default (recommended) — platform.minimaxi.com
-GROQ_API_KEY=your-key-here       # Fallback — console.groq.com (free tier available)
-```
-
-> **Provider priority:** MiniMax M2.5 → Groq. text2midi auto-selects the first key you provide.
-
-### Step 3: Run text2midi
+### Step 2: Run & Setup
 
 ```bash
 python main.py
 ```
 
-You'll see the active model displayed at startup:
+**That's it!** On first run, the app auto-launches an interactive setup wizard that:
+1. Shows you the available AI providers (free and paid)
+2. Gives you the direct URL to get an API key
+3. Lets you paste your key
+4. Tests the connection instantly
+5. Saves everything — you never have to do this again
+
+> **No `.env` file editing required.** The wizard handles everything.
+
+### Step 3: Create Music
+
+Enter a description when prompted:
 ```
-[INIT] Active LLM: MINIMAX
-[INIT] Model: MiniMax-M2.5 (default)
+Upbeat pop song with drums, bass, and bright piano
 ```
 
-### Step 3: Create Your First Composition
+Wait 10-30 seconds → find your MIDI file in `outputs/` → import into your DAW!
 
-1. **Enter a music description** when prompted:
-   ```
-   Upbeat pop song with drums, bass, and bright piano
-   ```
+---
 
-2. **Wait 10-30 seconds** for generation
+## 🔑 Choosing an AI Provider
 
-3. **Find your MIDI file** in the `outputs/` folder and import into your DAW
+You only need **ONE** provider. Here's a comparison:
 
-That's it! You've created your first AI composition.
+### Free Options (No Credit Card)
+
+| Provider | Speed | Quality | Best For |
+|----------|-------|---------|----------|
+| **Groq** ⭐ | Ultra-fast | Excellent | Best free option for most users |
+| **Ollama** | Depends on PC | Good | Privacy, offline use, no internet |
+| **Google Gemini** | Fast | Very Good | If you have a Google account |
+
+### Paid Options
+
+| Provider | Speed | Quality | Best For |
+|----------|-------|---------|----------|
+| **OpenAI** | Fast | Excellent | GPT-4o, industry leader |
+| **Anthropic** | Fast | Excellent | Claude, great reasoning |
+| **MiniMax** | Fast | Very Good | Strong structured output |
+| **Mistral** | Fast | Very Good | European, multilingual |
+| **DeepSeek** | Fast | Very Good | Affordable, coding strength |
+
+### Meta-Providers
+| Provider | Description |
+|----------|-------------|
+| **OpenRouter** | One API key → access 100+ models |
+
+> **Our recommendation:** Start with **Groq** (free, fast, excellent quality).
+
+---
+
+## 🔧 Re-configure Anytime
+
+```bash
+# Re-run the setup wizard
+python main.py --setup
+
+# Or for the TUI version
+python main_tui.py     # Use the Settings panel (Ctrl+S)
+```
+
+---
+
+## 🖥️ Using Ollama (Free, Local, Offline)
+
+Run AI models on your own computer — no API key, no internet, no cost:
+
+```bash
+# 1. Install Ollama
+#    Windows: Download from https://ollama.com
+#    Mac/Linux: curl -fsSL https://ollama.com/install.sh | sh
+
+# 2. Download a model
+ollama pull llama3.2
+
+# 3. Run text2midi — it auto-detects Ollama!
+python main.py
+```
+
+The setup wizard will detect Ollama automatically and offer it as an option.
+
+---
+
+## 📋 Alternative: Manual .env Configuration
+
+If you prefer, you can configure providers via a `.env` file instead of the wizard:
+
+```bash
+cp .env.example .env
+```
+
+Then open `.env` and add your key(s):
+```bash
+# You only need ONE of these:
+GROQ_API_KEY=gsk_your_key_here          # Free — console.groq.com
+OPENAI_API_KEY=sk-your_key_here         # Paid — platform.openai.com
+ANTHROPIC_API_KEY=sk-ant-your_key_here  # Paid — console.anthropic.com
+GEMINI_API_KEY=your_key_here            # Free tier — aistudio.google.com
+MINIMAX_API_KEY=your_key_here           # Paid — platform.minimaxi.com
+```
+
+> **Provider priority:** text2midi uses the first available key it finds. Configure multiple providers for automatic fallback.
+
 
 ---
 

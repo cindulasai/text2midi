@@ -13,21 +13,23 @@ from __future__ import annotations
 import logging
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from src.config.genre_registry import (
+    get_genre_ids_for_validation,
+    get_tempo_ranges,
+    SCALES_EXTENDED,
+    SCALE_ALIASES,
+    find_by_alias,
+)
 
 logger = logging.getLogger(__name__)
 
-# ---- Supported values (kept in sync with src/app/constants.py) ----------
+# ---- Supported values (dynamically built from genre_registry) ----------
 
-SUPPORTED_GENRES = (
-    "pop", "rock", "electronic", "lofi", "jazz",
-    "classical", "ambient", "cinematic", "funk", "rnb",
-)
+SUPPORTED_GENRES: tuple[str, ...] = get_genre_ids_for_validation()
 
-SUPPORTED_SCALES = (
-    "major", "minor", "dorian", "mixolydian",
-    "pentatonic_major", "pentatonic_minor", "blues", "harmonic_minor",
-)
+SUPPORTED_SCALES: tuple[str, ...] = tuple(sorted(SCALES_EXTENDED.keys()))
 
 SUPPORTED_ACTIONS = ("new", "extend", "modify", "analyze")
 
@@ -35,34 +37,50 @@ ENERGY_LEVELS = ("very_low", "low", "medium", "high", "very_high")
 
 DYNAMICS_LEVELS = ("minimal", "gentle", "moderate", "strong", "powerful")
 
-# Genre → typical BPM range (from GENRE_CONFIG)
-GENRE_TEMPO_RANGES: dict[str, tuple[int, int]] = {
-    "pop": (100, 130),
-    "rock": (110, 140),
-    "electronic": (120, 135),
-    "lofi": (70, 90),
-    "jazz": (80, 140),
-    "classical": (60, 120),
-    "ambient": (60, 80),
-    "cinematic": (70, 100),
-    "funk": (95, 115),
-    "rnb": (70, 100),
-}
+# Genre → typical BPM range (dynamically from genre_registry)
+GENRE_TEMPO_RANGES: dict[str, tuple[int, int]] = get_tempo_ranges()
 
 
 # ---- Sub-models ----------------------------------------------------------
 
 class GenreInfo(BaseModel):
-    """Primary and secondary genre classification."""
-    primary: Literal[
-        "pop", "rock", "electronic", "lofi", "jazz",
-        "classical", "ambient", "cinematic", "funk", "rnb",
-    ]
-    secondary: Optional[Literal[
-        "pop", "rock", "electronic", "lofi", "jazz",
-        "classical", "ambient", "cinematic", "funk", "rnb",
-    ]] = None
+    """Primary and secondary genre classification.
+
+    Accepts any genre ID from the registry (e.g. 'pop', 'electronic.house',
+    'african.afrobeat').  Aliases are resolved automatically.
+    """
+    primary: str = Field(
+        default="pop",
+        description="Genre ID from registry (e.g. 'pop', 'jazz.bebop', 'electronic.house').",
+    )
+    secondary: Optional[str] = Field(
+        default=None,
+        description="Optional secondary genre ID.",
+    )
     confidence: float = Field(ge=0.0, le=1.0, default=0.8)
+
+    @field_validator("primary", "secondary", mode="before")
+    @classmethod
+    def resolve_genre_alias(cls, v: Optional[str]) -> Optional[str]:
+        """Resolve genre aliases and validate against registry."""
+        if v is None:
+            return None
+        v_lower = v.strip().lower().replace("-", "_").replace(" ", "_")
+        # Direct match
+        if v_lower in SUPPORTED_GENRES:
+            return v_lower
+        # Alias lookup
+        node = find_by_alias(v)
+        if node is not None:
+            return node.id
+        # Root match (e.g. "house" → check all sub-genres)
+        for gid in SUPPORTED_GENRES:
+            parts = gid.split(".")
+            if len(parts) > 1 and parts[-1] == v_lower:
+                return gid
+        # Fall back to pop for unknown genres (with warning)
+        logger.warning("Unknown genre '%s', falling back to 'pop'.", v)
+        return "pop"
 
 
 class MoodInfo(BaseModel):
@@ -95,10 +113,10 @@ class KeyInfo(BaseModel):
         default=None,
         description="Root note: C, C#, Db, D, … B",
     )
-    scale: Literal[
-        "major", "minor", "dorian", "mixolydian",
-        "pentatonic_major", "pentatonic_minor", "blues", "harmonic_minor",
-    ] = "major"
+    scale: str = Field(
+        default="major",
+        description="Scale name from registry (e.g. 'major', 'dorian', 'hijaz', 'raga_bhairav').",
+    )
     confidence: float = Field(ge=0.0, le=1.0, default=0.5)
 
 
@@ -107,6 +125,24 @@ class DurationInfo(BaseModel):
     bars: Optional[int] = Field(ge=4, le=512, default=None)
     seconds: Optional[int] = Field(ge=5, le=3600, default=None)
     descriptor: Optional[Literal["short", "medium", "long", "very_long"]] = None
+    confidence: float = Field(ge=0.0, le=1.0, default=0.5)
+
+
+class TrackChannelInfo(BaseModel):
+    """Explicit track count and channel count requested by the user.
+
+    These are separate from the instruments list because a user may say
+    "5 tracks" without naming all 5 instruments, or "8 channels" to request
+    a wider MIDI channel spread.
+    """
+    track_count: Optional[int] = Field(
+        ge=1, le=16, default=None,
+        description="Number of tracks explicitly requested (e.g. '5 tracks').",
+    )
+    channel_count: Optional[int] = Field(
+        ge=1, le=16, default=None,
+        description="Number of MIDI channels explicitly requested (e.g. '8 channels').",
+    )
     confidence: float = Field(ge=0.0, le=1.0, default=0.5)
 
 
@@ -182,6 +218,9 @@ class ParsedIntent(BaseModel):
     tempo: TempoInfo = Field(default_factory=TempoInfo)
     key: KeyInfo = Field(default_factory=KeyInfo)
     duration: DurationInfo = Field(default_factory=DurationInfo)
+
+    # ---- Track / Channel count (explicit user request) ----
+    track_channel: TrackChannelInfo = Field(default_factory=TrackChannelInfo)
 
     # ---- Instruments ----
     instruments: List[InstrumentRequest] = Field(default_factory=list)
@@ -276,16 +315,33 @@ class ParsedIntent(BaseModel):
 
     @model_validator(mode="after")
     def validate_key_scale_coherence(self) -> "ParsedIntent":
-        """Ensure the scale value is in SUPPORTED_SCALES.
+        """Ensure the scale value is in SUPPORTED_SCALES or is a known alias.
 
         If the LLM returns an unsupported scale, fall back to 'major'.
         """
-        if self.key.scale not in SUPPORTED_SCALES:
-            logger.warning(
-                "Scale '%s' not in supported scales. Falling back to 'major'.",
-                self.key.scale,
-            )
-            self.key.scale = "major"
+        scale = self.key.scale
+        # Check direct match
+        if scale in SCALES_EXTENDED:
+            return self
+        # Check aliases
+        canonical = SCALE_ALIASES.get(scale)
+        if canonical:
+            self.key.scale = canonical
+            return self
+        # Normalize: try lowercase/underscore
+        normalized = scale.strip().lower().replace("-", "_").replace(" ", "_")
+        if normalized in SCALES_EXTENDED:
+            self.key.scale = normalized
+            return self
+        canonical = SCALE_ALIASES.get(normalized)
+        if canonical:
+            self.key.scale = canonical
+            return self
+        logger.warning(
+            "Scale '%s' not in supported scales. Falling back to 'major'.",
+            scale,
+        )
+        self.key.scale = "major"
         return self
 
 

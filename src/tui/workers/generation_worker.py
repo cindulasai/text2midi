@@ -16,6 +16,8 @@ from typing import Any, Dict
 from textual.message import Message
 from textual.worker import Worker, WorkerState
 
+from src.config.constants import OUTPUT_DIR
+
 logger = logging.getLogger(__name__)
 
 
@@ -59,14 +61,11 @@ async def run_generation(prompt: str, app: Any) -> Dict[str, Any]:
     in a *thread* via Textual's ``run_worker(..., thread=True)``.
     We import heavy modules inside the function to keep the TUI startup fast.
     """
-    import sys
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-
     from src.agents.graph import get_agentic_graph
     from src.agents.state import MusicState
 
     # Ensure outputs/ exists
-    Path("outputs").mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(exist_ok=True)
 
     session_id = str(uuid.uuid4())[:8]
     initial_state: MusicState = {

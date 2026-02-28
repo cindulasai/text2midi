@@ -4,10 +4,14 @@ Quality Control Node: Assess quality of generated tracks with intelligent reason
 Uses chain-of-thought quality analysis and recommendation generation.
 """
 
+import logging
+
 from src.agents.state import MusicState, GenerationQualityReport, TrackQualityIssue
 
+logger = logging.getLogger(__name__)
+
 try:
-    from src.midigent.intelligent_quality_reviewer import (
+    from src.analysis.intelligent_quality_reviewer import (
         IntelligentQualityReviewer, 
         QualityReport,
         SeverityLevel
@@ -22,16 +26,16 @@ def quality_control_agent_node(state: MusicState) -> MusicState:
     Agent Node: Assess quality of generated tracks with intelligent reasoning.
     Uses chain-of-thought analysis to evaluate musical quality.
     """
-    print("\n[🔍 QUALITY AGENT] Comprehensive quality assessment...")
+    logger.info("\n[🔍 QUALITY AGENT] Comprehensive quality assessment...")
     
     if state.get("error"):
-        print("[⚠️  ERROR] Skipping quality review due to upstream error")
+        logger.warning("[⚠️  ERROR] Skipping quality review due to upstream error")
         return state
     
     generated_tracks = state.get("generated_tracks", [])
     
     if not generated_tracks:
-        print("[⚠️  ] No tracks to review")
+        logger.warning("[⚠️  ] No tracks to review")
         state["needs_refinement"] = False
         state["quality_report"] = GenerationQualityReport(overall_score=0.0)
         return state
@@ -51,16 +55,16 @@ def quality_control_agent_node(state: MusicState) -> MusicState:
             )
             
             # Display the reasoning chain
-            print("\n" + "=" * 70)
+            logger.info("\n" + "=" * 70)
             for line in quality_report.reasoning_chain:
-                print(line)
-            print("=" * 70)
+                logger.info(line)
+            logger.info("=" * 70)
             
             # Display recommendations
             if quality_report.recommendations:
-                print("\n📋 RECOMMENDATIONS:")
+                logger.info("\n📋 RECOMMENDATIONS:")
                 for rec in quality_report.recommendations:
-                    print(f"   • {rec}")
+                    logger.info("   • %s", rec)
             
             # Convert to legacy format for compatibility
             legacy_report = GenerationQualityReport(
@@ -89,13 +93,13 @@ def quality_control_agent_node(state: MusicState) -> MusicState:
                 state["previous_quality_reviews"] = []
             state["previous_quality_reviews"].append(quality_report)
             
-            print(f"\n✅ [ASSESSMENT COMPLETE] Score: {quality_report.overall_score:.2f}/1.00")
-            print(f"   Refinement needed: {'YES' if quality_report.needs_refinement else 'NO'}")
-            print(f"   Priority: {quality_report.refinement_priority}")
+            logger.info("\n✅ [ASSESSMENT COMPLETE] Score: %.2f/1.00", quality_report.overall_score)
+            logger.info("   Refinement needed: %s", 'YES' if quality_report.needs_refinement else 'NO')
+            logger.info("   Priority: %s", quality_report.refinement_priority)
             
         else:
             # Fallback to basic quality checks
-            print("[ℹ️  ] Using basic quality checks (intelligent reviewer unavailable)")
+            logger.info("[ℹ️  ] Using basic quality checks (intelligent reviewer unavailable)")
             issues = []
             positive_aspects = []
             
@@ -146,15 +150,14 @@ def quality_control_agent_node(state: MusicState) -> MusicState:
             state["quality_report"] = report
             state["needs_refinement"] = needs_refinement
             
-            print(f"   Score: {overall_score:.2f}/1.0 | Issues: {len(issues)}")
+            logger.info("   Score: %.2f/1.0 | Issues: %d", overall_score, len(issues))
         
     except Exception as e:
         state["error"] = f"Quality assessment failed: {str(e)}"
         state["needs_refinement"] = False
         state["quality_report"] = GenerationQualityReport(overall_score=0.5)
-        print(f"[❌ ERROR] {state['error']}")
-        import traceback
-        traceback.print_exc()
+        logger.error("[❌ ERROR] %s", state['error'])
+        logger.debug("Quality assessment traceback:", exc_info=True)
     
     return state
 
@@ -168,8 +171,8 @@ def quality_control_router(state: MusicState) -> str:
         current_iter = state.get("current_iteration", 0)
         max_iter = state.get("max_refinement_iterations", 2)
         if current_iter < max_iter:
-            print(f"\n[🔄 ROUTING] Quality check denies refinement (iter {current_iter}/{max_iter})")
+            logger.info("\n[🔄 ROUTING] Quality check requires refinement (iter %d/%d)", current_iter, max_iter)
             return "refine"
     
-    print("\n[✅ ROUTING] Quality check passed - proceeding to finalization")
+    logger.info("\n[✅ ROUTING] Quality check passed - proceeding to finalization")
     return "finalize"

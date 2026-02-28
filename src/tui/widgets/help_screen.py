@@ -47,6 +47,7 @@ class HelpScreen(ModalScreen[None]):
         shortcuts = [
             ("Ctrl+G", "Focus prompt & generate"),
             ("Ctrl+R", "Random (Surprise Me) prompt"),
+            ("Ctrl+D", "Copy MIDI to DAW clipboard"),
             ("Ctrl+H", "Toggle sidebar"),
             ("Ctrl+S", "Open settings (API key)"),
             ("Ctrl+O", "Open output folder"),

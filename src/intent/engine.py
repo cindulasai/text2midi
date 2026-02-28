@@ -7,7 +7,7 @@ Orchestrates the full pipeline:
   → correction loop → enrichment → EnhancedMusicIntent output
 
 Replaces three legacy parsers:
-  - src/midigent/advanced_intent_parser.py  (regex-only, no LLM)
+  - src/analysis/advanced_intent_parser.py  (regex-only, no LLM)
   - src/app/intent_parser.py               (weak 15-line prompt)
   - src/agents/intent_parser_node.py        (_parse_intent_basic keyword scan)
 """
@@ -45,9 +45,9 @@ def _intent_to_enhanced(parsed: ParsedIntent, raw_prompt: str) -> Any:
 
     This bridges the new schema to the existing agentic graph that expects
     ``EnhancedMusicIntent`` and ``CompositionStructure`` from
-    ``src.midigent.advanced_intent_parser``.
+    ``src.agents.state``.
     """
-    from src.midigent.advanced_intent_parser import (
+    from src.agents.state import (
         CompositionComplexity,
         CompositionStructure,
         EnhancedMusicIntent,
@@ -112,7 +112,7 @@ def _build_composition_structure(
     total_bars: int, tempo: int, parsed: ParsedIntent
 ) -> Any:
     """Build a CompositionStructure from a ParsedIntent."""
-    from src.midigent.advanced_intent_parser import CompositionStructure, CompositionComplexity
+    from src.agents.state import CompositionStructure, CompositionComplexity
 
     _complexity_map = {
         "simple": CompositionComplexity.SIMPLE,
@@ -190,12 +190,21 @@ def _intent_to_music_intent(parsed: ParsedIntent, raw_prompt: str) -> Any:
     """
     from src.agents.state import MusicIntent
 
+    # Determine track count: prefer explicit request, else count instruments
+    tc = parsed.track_channel
+    if tc.track_count and tc.track_count > 0:
+        track_count = tc.track_count
+    elif parsed.instruments:
+        track_count = len(parsed.instruments)
+    else:
+        track_count = None
+
     return MusicIntent(
         action=parsed.action,
         genre=parsed.genre.primary,
         mood=parsed.mood.primary,
         energy=parsed.energy.level,
-        track_count=len(parsed.instruments) if parsed.instruments else None,
+        track_count=track_count,
         duration_requested=parsed.duration.bars,
         specific_instruments=[inst.name for inst in parsed.instruments],
         style_descriptors=parsed.production.descriptors,
@@ -227,6 +236,7 @@ def _fallback_keyword_parse(text: str, preprocessed: PreprocessedInput) -> Parse
         ProductionStyle,
         StructureInfo,
         TempoInfo,
+        TrackChannelInfo,
     )
 
     text_lower = text.lower()
@@ -245,12 +255,27 @@ def _fallback_keyword_parse(text: str, preprocessed: PreprocessedInput) -> Parse
         (["wedding", "ceremony"], "classical", "romantic", "medium"),
         (["horror", "scary", "creepy", "spooky", "halloween"], "cinematic", "dark", "medium"),
         (["film", "movie", "trailer", "scene", "score"], "cinematic", "epic", "high"),
-        (["game", "gaming", "video game", "boss fight"], "electronic", "intense", "high"),
+        (["game", "gaming", "video game", "boss fight"], "cinematic.video_game", "intense", "high"),
         (["coffee", "cafe", "morning", "brunch"], "jazz", "warm", "medium"),
         (["driving", "road trip", "highway"], "rock", "energetic", "high"),
         (["sunset", "beach", "ocean", "waves"], "ambient", "peaceful", "low"),
         (["rain", "storm", "thunder"], "ambient", "melancholic", "low"),
         (["night", "late night", "midnight", "nocturnal"], "lofi", "contemplative", "low"),
+        # World music context rules
+        (["bollywood", "hindi", "desi"], "asian.bollywood", "lively", "high"),
+        (["anime", "jpop", "j-pop"], "pop.jpop", "energetic", "high"),
+        (["kpop", "k-pop", "korean"], "pop.kpop", "energetic", "high"),
+        (["caribbean", "island", "tropical"], "latin.calypso", "happy", "medium"),
+        (["african", "afro"], "african.afrobeat", "energetic", "high"),
+        (["arabic", "middle east"], "asian.maqam", "mystical", "medium"),
+        (["indian", "raga"], "asian.hindustani", "contemplative", "medium"),
+        (["japanese", "zen garden"], "asian.japanese_traditional", "peaceful", "low"),
+        (["chinese", "guzheng"], "asian.chinese_traditional", "peaceful", "low"),
+        (["flamenco", "spanish"], "folk.flamenco", "passionate", "high"),
+        (["irish", "celtic"], "folk.celtic", "lively", "high"),
+        (["tango", "argentine"], "latin.tango", "passionate", "medium"),
+        (["reggae", "jamaican"], "latin.reggae", "chill", "medium"),
+        (["samba", "brazilian", "carnival"], "latin.samba", "energetic", "high"),
     ]
 
     context_genre = None
@@ -266,16 +291,70 @@ def _fallback_keyword_parse(text: str, preprocessed: PreprocessedInput) -> Parse
     # ---- Genre detection (ordered by specificity) ----
     genre = "pop"
     genre_keywords = {
+        # Most specific first (longest matches)
+        "drum and bass": "electronic.drum_and_bass", "drum & bass": "electronic.drum_and_bass",
+        "deep house": "electronic.deep_house", "future bass": "electronic.future_bass",
+        "dark ambient": "cinematic.dark_ambient", "neo soul": "blues.neo_soul",
+        "bossa nova": "jazz.bossa_nova", "smooth jazz": "jazz.smooth",
+        "gypsy jazz": "jazz.gypsy", "latin jazz": "jazz.latin",
+        "post rock": "rock.post_rock", "post-rock": "rock.post_rock",
+        "lo-fi hip hop": "hiphop.lofi_hiphop", "lofi hip hop": "hiphop.lofi_hiphop",
+        "city pop": "pop.city_pop", "dream pop": "pop.dream_pop",
+        "synth pop": "pop.synth_pop", "synthpop": "pop.synth_pop",
+        "classic rock": "rock.classic", "prog rock": "rock.progressive",
+        "surf rock": "rock.surf",
+        "heavy metal": "metal.heavy", "symphonic metal": "metal.symphonic",
+        "doom metal": "metal.doom", "power metal": "metal.power",
+        "desert blues": "african.desert_blues",
+        "ethio jazz": "jazz.ethio", "ethiopian jazz": "jazz.ethio",
+        # Sub-genre single words
         "lo-fi": "lofi", "lofi": "lofi", "lo fi": "lofi",
         "ambient": "ambient", "cinematic": "cinematic",
         "classical": "classical", "orchestral": "classical",
-        "jazz": "jazz", "swing": "jazz",
-        "electronic": "electronic", "edm": "electronic", "techno": "electronic",
-        "drum and bass": "electronic",
-        "funk": "funk", "funky": "funk",
-        "r&b": "rnb", "rnb": "rnb", "soul": "rnb",
-        "rock": "rock", "metal": "rock", "punk": "rock",
+        "jazz": "jazz", "swing": "jazz.swing", "bebop": "jazz.bebop",
+        "electronic": "electronic", "edm": "electronic",
+        "techno": "electronic.techno", "trance": "electronic.trance",
+        "dubstep": "electronic.dubstep", "dnb": "electronic.drum_and_bass",
+        "house": "electronic.house", "synthwave": "electronic.synthwave",
+        "vaporwave": "electronic.vaporwave", "downtempo": "electronic.downtempo",
+        "garage": "electronic.uk_garage", "idm": "electronic.idm",
+        "funk": "rnb.funk", "funky": "rnb.funk", "disco": "rnb.disco",
+        "r&b": "rnb", "rnb": "rnb", "soul": "blues.soul",
+        "rock": "rock", "punk": "rock.punk", "grunge": "rock.grunge",
+        "shoegaze": "rock.shoegaze",
+        "metal": "metal", "djent": "metal.djent",
         "pop": "pop",
+        # Hip-hop
+        "hip hop": "hiphop", "hip-hop": "hiphop", "rap": "hiphop",
+        "trap": "hiphop.trap", "boom bap": "hiphop.boom_bap",
+        "drill": "hiphop.drill", "phonk": "hiphop.phonk",
+        # Blues
+        "blues": "blues", "gospel": "blues.gospel", "motown": "blues.motown",
+        # Folk
+        "folk": "folk", "country": "folk.country", "bluegrass": "folk.bluegrass",
+        "celtic": "folk.celtic", "irish": "folk.celtic",
+        "klezmer": "folk.klezmer", "fado": "folk.fado",
+        "flamenco": "folk.flamenco", "balkan": "folk.balkan",
+        "nordic": "folk.nordic",
+        # Latin & Caribbean
+        "latin": "latin", "salsa": "latin.salsa",
+        "reggaeton": "latin.reggaeton", "samba": "latin.samba",
+        "cumbia": "latin.cumbia", "reggae": "latin.reggae",
+        "tango": "latin.tango", "ska": "latin.ska",
+        "dancehall": "latin.dancehall", "bachata": "latin.bachata",
+        "merengue": "latin.merengue", "calypso": "latin.calypso",
+        # African
+        "afrobeat": "african.afrobeat", "afrobeats": "african.afrobeat",
+        "amapiano": "african.amapiano", "highlife": "african.highlife",
+        "soukous": "african.soukous", "gnawa": "african.gnawa",
+        # Asian & Middle Eastern
+        "bollywood": "asian.bollywood", "raga": "asian.hindustani",
+        "gamelan": "asian.gamelan", "maqam": "asian.maqam",
+        "qawwali": "asian.qawwali", "koto": "asian.japanese_traditional",
+        "guzheng": "asian.chinese_traditional",
+        # K-pop, J-pop
+        "k-pop": "pop.kpop", "kpop": "pop.kpop",
+        "j-pop": "pop.jpop", "jpop": "pop.jpop",
     }
     genre_found = False
     for kw, g in genre_keywords.items():
@@ -359,26 +438,74 @@ def _fallback_keyword_parse(text: str, preprocessed: PreprocessedInput) -> Parse
     # ---- Instruments ----
     instruments: list[InstrumentRequest] = []
     instrument_scan = {
+        # Keyboards / keys
         "piano": ("piano", "harmony"),
+        "organ": ("organ", "harmony"),
+        "harpsichord": ("harpsichord", "melody"),
+        # Guitar family
         "guitar": ("acoustic_guitar", "melody"),
         "electric guitar": ("electric_guitar", "melody"),
+        "acoustic guitar": ("acoustic_guitar", "melody"),
+        # Bass
         "bass": ("electric_bass", "bass"),
+        # Drums / percussion
         "drums": ("drums", "rhythm"),
+        "percussion": ("percussion", "rhythm"),
+        # Strings
         "strings": ("strings", "harmony"),
         "violin": ("violin", "melody"),
+        "viola": ("viola", "harmony"),
         "cello": ("cello", "harmony"),
+        "harp": ("harp", "melody"),
+        # Brass
         "trumpet": ("trumpet", "lead"),
+        "trombone": ("trombone", "harmony"),
+        "french horn": ("french_horn", "harmony"),
+        "horn": ("french_horn", "harmony"),
+        # Woodwinds
         "saxophone": ("saxophone", "lead"),
         "sax": ("saxophone", "lead"),
         "flute": ("flute", "melody"),
-        "organ": ("organ", "harmony"),
+        "clarinet": ("clarinet", "melody"),
+        "oboe": ("oboe", "melody"),
+        # Synths / pads
         "synth": ("synth_pad", "pad"),
         "pad": ("synth_pad", "pad"),
-        "choir": ("choir", "harmony"),
+        "synth lead": ("synth_lead", "lead"),
+        "arpeggio": ("synth_arp", "arpeggio"),
+        # Voices / choir
+        "choir": ("choir", "pad"),
+        "vocal": ("choir", "pad"),
+        # Tuned percussion / bells
+        "bells": ("bells", "melody"),
+        "bell": ("bells", "melody"),
+        "glockenspiel": ("glockenspiel", "melody"),
+        "vibraphone": ("vibraphone", "melody"),
+        "marimba": ("marimba", "melody"),
+        "xylophone": ("xylophone", "melody"),
+        "chimes": ("bells", "fx"),
+        "tubular bells": ("bells", "fx"),
+        # FX / texture
+        "atmosphere": ("fx_atmosphere", "fx"),
+        "ambient": ("fx_atmosphere", "fx"),
+        "rain": ("fx_atmosphere", "fx"),
+        "texture": ("fx_atmosphere", "fx"),
     }
-    for kw, (name, role) in instrument_scan.items():
+    # Scan longer keywords first to avoid partial matches (e.g. "electric guitar" before "guitar")
+    for kw, (name, role) in sorted(instrument_scan.items(), key=lambda x: -len(x[0])):
         if kw in text_lower:
-            instruments.append(InstrumentRequest(name=name, role=role, priority=7))
+            # Avoid duplicate instrument names
+            if not any(i.name == name for i in instruments):
+                instruments.append(InstrumentRequest(name=name, role=role, priority=7))
+
+    # ---- Track / Channel info from preprocessor ----
+    tc_info = TrackChannelInfo()
+    if ext.track_count is not None:
+        tc_info.track_count = ext.track_count
+        tc_info.confidence = 0.95
+    if ext.channel_count is not None:
+        tc_info.channel_count = ext.channel_count
+        tc_info.confidence = max(tc_info.confidence, 0.95)
 
     return ParsedIntent(
         reasoning="[Keyword fallback — no LLM available]",
@@ -389,6 +516,7 @@ def _fallback_keyword_parse(text: str, preprocessed: PreprocessedInput) -> Parse
         tempo=TempoInfo(bpm=tempo_bpm, source=tempo_source, confidence=0.4 if tempo_source == "genre_default" else 0.9),
         key=KeyInfo(root=key_root, scale=key_scale, confidence=0.3 if not key_root else 0.8),
         duration=DurationInfo(bars=bars, seconds=seconds, confidence=0.4),
+        track_channel=tc_info,
         instruments=instruments,
         dynamics=DynamicsInfo(intensity="moderate", arc="flat"),
         structure=StructureInfo(),
@@ -572,55 +700,101 @@ class LLMIntentEngine:
             bpm = parsed.tempo.bpm or 120
             parsed.duration.bars = max(4, math.ceil((parsed.duration.seconds * bpm) / (4 * 60)))
 
+        # Track count: explicit user request always wins
+        if ext.track_count is not None:
+            parsed.track_channel.track_count = ext.track_count
+            parsed.track_channel.confidence = max(parsed.track_channel.confidence, 0.95)
+            logger.info(
+                "[IntentEngine] Hard-number override: track_count = %d",
+                ext.track_count,
+            )
+
+        # Channel count: explicit user request always wins
+        if ext.channel_count is not None:
+            parsed.track_channel.channel_count = ext.channel_count
+            parsed.track_channel.confidence = max(parsed.track_channel.confidence, 0.95)
+            logger.info(
+                "[IntentEngine] Hard-number override: channel_count = %d",
+                ext.channel_count,
+            )
+
+        # If channel_count > track_count, upgrade track_count to match
+        if (
+            parsed.track_channel.channel_count is not None
+            and (
+                parsed.track_channel.track_count is None
+                or parsed.track_channel.channel_count > parsed.track_channel.track_count
+            )
+        ):
+            parsed.track_channel.track_count = parsed.track_channel.channel_count
+            logger.info(
+                "[IntentEngine] Upgraded track_count to match channel_count = %d",
+                parsed.track_channel.channel_count,
+            )
+
         return parsed
 
     def _enrich_defaults(self, parsed: ParsedIntent) -> ParsedIntent:
         """Fill genre-aware defaults for fields the LLM or fallback left empty.
 
-        When instruments list is empty (common with vague prompts), populate it
-        with genre-typical instruments.  When key root is None, use the genre's
-        default root.
+        When instruments list is empty OR shorter than the requested track_count,
+        populate or pad with genre-typical instruments.  When key root is None,
+        use the genre's default root.
         """
         from src.intent.schema import InstrumentRequest, GENRE_TEMPO_RANGES
-
-        # Genre → typical default instruments (name, role, priority)
-        _GENRE_INSTRUMENTS: dict[str, list[tuple[str, str, int]]] = {
-            "pop":        [("piano", "harmony", 7), ("electric_guitar", "melody", 8), ("electric_bass", "bass", 8), ("drums", "rhythm", 9)],
-            "rock":       [("electric_guitar", "lead", 9), ("electric_guitar", "harmony", 7), ("electric_bass", "bass", 8), ("drums", "rhythm", 9)],
-            "electronic": [("synth_lead", "lead", 8), ("synth_pad", "pad", 7), ("synth_bass", "bass", 8), ("drums", "rhythm", 9), ("arpeggiator", "arpeggio", 6)],
-            "lofi":       [("piano", "melody", 8), ("electric_bass", "bass", 7), ("drums", "rhythm", 8), ("synth_pad", "pad", 6)],
-            "jazz":       [("piano", "harmony", 8), ("fretless_bass", "bass", 8), ("drums", "rhythm", 8), ("saxophone", "melody", 9)],
-            "classical":  [("strings", "harmony", 9), ("piano", "melody", 8), ("cello", "bass", 7), ("flute", "melody", 6)],
-            "ambient":    [("synth_pad", "pad", 9), ("strings", "harmony", 7), ("piano", "melody", 5)],
-            "cinematic":  [("strings", "harmony", 9), ("brass", "lead", 8), ("drums", "rhythm", 7), ("piano", "melody", 6), ("choir", "pad", 5)],
-            "funk":       [("electric_guitar", "melody", 9), ("electric_bass", "bass", 9), ("drums", "rhythm", 9), ("organ", "harmony", 7), ("brass", "lead", 6)],
-            "rnb":        [("piano", "harmony", 8), ("electric_bass", "bass", 8), ("drums", "rhythm", 8), ("synth_pad", "pad", 6), ("vocals", "melody", 9)],
-        }
-
-        # Genre → default key root
-        _GENRE_DEFAULT_KEY: dict[str, str] = {
-            "pop": "C", "rock": "E", "electronic": "A", "lofi": "D",
-            "jazz": "F", "classical": "G", "ambient": "C", "cinematic": "D",
-            "funk": "E", "rnb": "Ab",
-        }
+        from src.config.genre_registry import get_genre, get_genre_instruments
 
         genre = parsed.genre.primary
 
-        # Enrich empty instruments list
-        if not parsed.instruments:
-            defaults = _GENRE_INSTRUMENTS.get(genre, _GENRE_INSTRUMENTS["pop"])
-            parsed.instruments = [
-                InstrumentRequest(name=name, role=role, priority=prio)
-                for name, role, prio in defaults
-            ]
-            logger.info(
-                "[IntentEngine] Enriched empty instruments with %d genre defaults for '%s'.",
-                len(parsed.instruments), genre,
-            )
+        # Look up genre node for default key
+        node = get_genre(genre)
+
+        # Determine the target track count (explicit request or genre default)
+        requested_tracks = parsed.track_channel.track_count
+        current_count = len(parsed.instruments)
+
+        # Enrich instruments list: either empty OR fewer than requested
+        if current_count == 0 or (requested_tracks and current_count < requested_tracks):
+            # Get instruments from registry (falls back to parent → pop)
+            defaults = get_genre_instruments(genre)
+            existing_names = {inst.name for inst in parsed.instruments}
+
+            if current_count == 0:
+                # Fill entirely from defaults
+                target = requested_tracks or len(defaults)
+                target = min(target, len(defaults))
+                parsed.instruments = [
+                    InstrumentRequest(name=name, role=role, priority=prio)
+                    for name, role, prio in defaults[:target]
+                ]
+                logger.info(
+                    "[IntentEngine] Enriched empty instruments with %d genre "
+                    "defaults for '%s' (requested: %s).",
+                    len(parsed.instruments), genre, requested_tracks,
+                )
+            else:
+                # Pad existing list up to requested_tracks
+                needed = requested_tracks - current_count
+                added = 0
+                for name, role, prio in defaults:
+                    if added >= needed:
+                        break
+                    if name not in existing_names:
+                        parsed.instruments.append(
+                            InstrumentRequest(name=name, role=role, priority=prio)
+                        )
+                        existing_names.add(name)
+                        added += 1
+                logger.info(
+                    "[IntentEngine] Padded instruments from %d to %d to match "
+                    "requested track_count=%d for genre '%s'.",
+                    current_count, len(parsed.instruments), requested_tracks, genre,
+                )
 
         # Enrich missing key root
         if parsed.key.root is None and parsed.key.confidence < 0.5:
-            parsed.key.root = _GENRE_DEFAULT_KEY.get(genre, "C")
+            default_key = node.default_key if node else "C"
+            parsed.key.root = default_key
             logger.info(
                 "[IntentEngine] Enriched missing key root → '%s' (genre default for '%s').",
                 parsed.key.root, genre,

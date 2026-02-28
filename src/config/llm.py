@@ -1,108 +1,241 @@
 # -*- coding: utf-8 -*-
 """
 LLM Configuration and Management
+=================================
+
 Handles provider initialization and LLM calls.
 
-Provider priority (highest → lowest):
-  1. MiniMax M2.5  (default)
-  2. Groq          (fallback)
+Supports **100+ LLM providers** via LiteLLM:
+  - Groq, OpenAI, Anthropic, Google Gemini, Mistral, Cohere, DeepSeek,
+    Together AI, Fireworks, Perplexity, OpenRouter, Ollama (local), …
+
+Provider priority is determined by registration order.  The *primary*
+provider from ``AppSettings`` is registered first; additional configured
+providers follow as automatic fallbacks.
+
+Delegates to ``LiteLLMProvider`` in ``src.config.providers``.
+
+Backward compatibility
+----------------------
+Legacy environment variables (``MINIMAX_API_KEY``, ``GROQ_API_KEY``,
+``OPENAI_CUSTOM_*``) are still honoured so existing setups keep working.
 """
 
 import logging
 import os
 from typing import Optional
 
-from groq import Groq
-from openai import OpenAI
+from src.config.providers import (
+    GroqProvider,
+    LiteLLMProvider,
+    MinimaxProvider,
+    OpenAICustomProvider,
+    ProviderRegistry,
+)
+from src.config.provider_catalog import PROVIDER_MAP, get_provider
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Model lists
+# Singleton registry — populated by LLMConfig.initialize()
 # ---------------------------------------------------------------------------
 
-# MiniMax base URL (international endpoint, OpenAI-compatible)
-_MINIMAX_BASE_URL = "https://api.minimaxi.chat/v1"
-_MINIMAX_MODEL = "MiniMax-M2.5"
+_registry = ProviderRegistry()
 
 
 class LLMConfig:
     """Runtime configuration for LLM provider selection.
 
-    Provider priority: minimax → groq → openai_custom.
-    Any provider that is not configured is skipped; the next available one
-    becomes the default.
+    Call ``initialize()`` once at startup (after ``AppSettings.apply_to_environment()``
+    if using the TUI).  The method reads configured providers from
+    ``AppSettings`` **and** scans legacy env-vars for backward compat.
+
+    Public attributes are kept for backward-compatibility with code that
+    reads ``LLMConfig.AVAILABLE_PROVIDERS``, ``LLMConfig.DEFAULT_PROVIDER``,
+    etc.
     """
 
     DEFAULT_PROVIDER: Optional[str] = None
     AVAILABLE_PROVIDERS: list = []
 
-    # Groq
-    GROQ_MODELS = ["llama-4-maverick", "llama-3.3-70b-versatile"]
-    CURRENT_GROQ_MODEL = "llama-4-maverick"
+    # Groq helpers (backward compat)
+    GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-4-maverick"]
+    CURRENT_GROQ_MODEL = "llama-3.3-70b-versatile"
 
-    # Read from environment only – never hard-code secrets in source.
-    MINIMAX_API_KEY: str = os.environ.get("MINIMAX_API_KEY", "")
-    GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
-
-    # OpenAI-compatible custom endpoint
-    OPENAI_CUSTOM_API_KEY: str = os.environ.get("OPENAI_CUSTOM_API_KEY", "")
-    OPENAI_CUSTOM_ENDPOINT: str = os.environ.get("OPENAI_CUSTOM_ENDPOINT", "")
-    OPENAI_CUSTOM_MODEL: str = os.environ.get("OPENAI_CUSTOM_MODEL", "gpt-4")
+    # Legacy env-var keys (kept so old .env files still work)
+    MINIMAX_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
+    OPENAI_CUSTOM_API_KEY: str = ""
+    OPENAI_CUSTOM_ENDPOINT: str = ""
+    OPENAI_CUSTOM_MODEL: str = ""
 
     @classmethod
     def initialize(cls) -> None:
         """Detect and register available LLM providers.
 
-        Registration order determines fallback priority:
-          minimax → groq
+        Resolution order:
+        1. Multi-provider list from ``AppSettings["providers"]`` (new format).
+        2. Single-provider from ``AppSettings["provider"]`` (migration compat).
+        3. Legacy environment variables (``MINIMAX_API_KEY``, ``GROQ_API_KEY``, …).
+
         The first successfully registered provider becomes the default.
         """
-        # Reload keys in case .env was loaded after module import
+        global _registry
+        _registry = ProviderRegistry()
+        cls.AVAILABLE_PROVIDERS.clear()
+
+        # ── 1. New multi-provider settings ──────────────────────────
+        registered_ids: set[str] = set()
+        try:
+            from src.config.settings import AppSettings
+
+            providers_list = AppSettings.get("providers", [])
+            primary = AppSettings.get("primary_provider", "")
+
+            # Register primary first (highest priority)
+            if primary:
+                for entry in providers_list:
+                    if entry.get("id") == primary:
+                        cls._register_from_entry(entry, registered_ids)
+                        break
+
+            # Register remaining configured providers as fallbacks
+            for entry in providers_list:
+                pid = entry.get("id", "")
+                if pid and pid not in registered_ids:
+                    cls._register_from_entry(entry, registered_ids)
+        except Exception as exc:
+            logger.debug("[LLM Config] AppSettings multi-provider read: %s", exc)
+
+        # ── 2. Legacy single-provider from AppSettings ──────────────
+        try:
+            from src.config.settings import AppSettings
+
+            legacy_provider = AppSettings.get("provider", "")
+            legacy_key = AppSettings.get("api_key", "")
+            if legacy_provider and legacy_key and legacy_provider not in registered_ids:
+                cls._register_legacy_single(
+                    legacy_provider, legacy_key, registered_ids,
+                )
+        except Exception:
+            pass
+
+        # ── 3. Legacy environment variables ─────────────────────────
         cls.MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
         cls.GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
         cls.OPENAI_CUSTOM_API_KEY = os.environ.get("OPENAI_CUSTOM_API_KEY", "")
         cls.OPENAI_CUSTOM_ENDPOINT = os.environ.get("OPENAI_CUSTOM_ENDPOINT", "")
         cls.OPENAI_CUSTOM_MODEL = os.environ.get("OPENAI_CUSTOM_MODEL", "gpt-4")
 
-        cls.AVAILABLE_PROVIDERS.clear()
-
-        # 1. MiniMax M2.5 (default / highest priority)
-        if cls.MINIMAX_API_KEY:
+        if cls.MINIMAX_API_KEY and "minimax" not in registered_ids:
             try:
-                # Light connectivity check – list models endpoint is ideal; a
-                # simple client construction is sufficient as a first gate.
-                _client = OpenAI(
-                    api_key=cls.MINIMAX_API_KEY,
-                    base_url=_MINIMAX_BASE_URL,
-                )
+                _registry.register(MinimaxProvider(api_key=cls.MINIMAX_API_KEY))
                 cls.AVAILABLE_PROVIDERS.append("minimax")
-                logger.info("[LLM Config] MiniMax provider registered (%s)", _MINIMAX_MODEL)
+                registered_ids.add("minimax")
             except Exception as exc:
-                logger.warning("[LLM Config] MiniMax init failed: %s", exc)
+                logger.warning("[LLM Config] Legacy MiniMax init failed: %s", exc)
 
-        # 2. Groq (first fallback)
-        if cls.GROQ_API_KEY:
-            cls.AVAILABLE_PROVIDERS.append("groq")
-
-        # 3. OpenAI-compatible custom endpoint (second fallback)
-        if cls.OPENAI_CUSTOM_API_KEY and cls.OPENAI_CUSTOM_ENDPOINT:
-            cls.AVAILABLE_PROVIDERS.append("openai_custom")
-            logger.info(
-                "[LLM Config] OpenAI-custom provider registered (endpoint=%s, model=%s)",
-                cls.OPENAI_CUSTOM_ENDPOINT,
-                cls.OPENAI_CUSTOM_MODEL,
+        if cls.GROQ_API_KEY and "groq" not in registered_ids:
+            _registry.register(
+                GroqProvider(api_key=cls.GROQ_API_KEY, preferred_model=cls.CURRENT_GROQ_MODEL)
             )
+            cls.AVAILABLE_PROVIDERS.append("groq")
+            registered_ids.add("groq")
 
-        # First available provider wins the default slot
-        cls.DEFAULT_PROVIDER = (
-            cls.AVAILABLE_PROVIDERS[0] if cls.AVAILABLE_PROVIDERS else None
-        )
+        if (
+            cls.OPENAI_CUSTOM_API_KEY
+            and cls.OPENAI_CUSTOM_ENDPOINT
+            and "openai_custom" not in registered_ids
+            and "custom" not in registered_ids
+        ):
+            _registry.register(
+                OpenAICustomProvider(
+                    api_key=cls.OPENAI_CUSTOM_API_KEY,
+                    base_url=cls.OPENAI_CUSTOM_ENDPOINT,
+                    model=cls.OPENAI_CUSTOM_MODEL,
+                )
+            )
+            cls.AVAILABLE_PROVIDERS.append("openai_custom")
+            registered_ids.add("openai_custom")
+
+        # ── Set default ─────────────────────────────────────────────
+        cls.DEFAULT_PROVIDER = _registry.default
         logger.info(
             "[LLM Config] Providers: %s  Default: %s",
             cls.AVAILABLE_PROVIDERS,
             cls.DEFAULT_PROVIDER,
         )
+
+    # ------------------------------------------------------------------ #
+    # Internal helpers
+    # ------------------------------------------------------------------ #
+
+    @classmethod
+    def _register_from_entry(cls, entry: dict, registered: set[str]) -> None:
+        """Register a single provider from the new ``providers`` list format."""
+        pid = entry.get("id", "")
+        api_key = entry.get("api_key", "")
+        model = entry.get("model", "")
+        endpoint = entry.get("endpoint", "")
+
+        if not pid:
+            return
+
+        catalog = get_provider(pid)
+
+        # Build the litellm model string
+        if not model and catalog:
+            model = catalog.default_model
+        if catalog and "/" not in model and catalog.litellm_prefix:
+            model = f"{catalog.litellm_prefix}/{model}"
+
+        # Determine base_url
+        base_url = endpoint
+        if not base_url and pid == "minimax":
+            base_url = "https://api.minimaxi.chat/v1"
+        if not base_url and pid == "ollama":
+            base_url = "http://localhost:11434"
+
+        # For MiniMax, route through openai compat
+        if pid == "minimax" and not model.startswith("openai/"):
+            model = f"openai/{model.split('/')[-1]}"
+
+        provider = LiteLLMProvider(
+            provider_id=pid,
+            api_key=api_key,
+            model=model,
+            base_url=base_url,
+        )
+        _registry.register(provider)
+        cls.AVAILABLE_PROVIDERS.append(pid)
+        registered.add(pid)
+        logger.info("[LLM Config] Registered %s (model=%s)", pid, model)
+
+    @classmethod
+    def _register_legacy_single(
+        cls, provider_id: str, api_key: str, registered: set[str],
+    ) -> None:
+        """Register from the old single-provider AppSettings format."""
+        try:
+            from src.config.settings import AppSettings
+
+            endpoint = AppSettings.get("custom_endpoint", "")
+            model = AppSettings.get("custom_model", "")
+        except Exception:
+            endpoint = ""
+            model = ""
+
+        entry = {
+            "id": provider_id,
+            "api_key": api_key,
+            "model": model,
+            "endpoint": endpoint,
+        }
+        cls._register_from_entry(entry, registered)
+
+    # ------------------------------------------------------------------ #
+    # Public helpers (backward compat)
+    # ------------------------------------------------------------------ #
 
     @classmethod
     def set_provider(cls, provider: str) -> None:
@@ -120,14 +253,15 @@ class LLMConfig:
     @classmethod
     def set_groq_model(cls, model: str) -> None:
         """Set the preferred Groq model (tried first; others used as fallback)."""
-        if model in cls.GROQ_MODELS:
+        groq = _registry.get("groq")
+        if groq is not None and isinstance(groq, GroqProvider):
+            groq.preferred_model = model
             cls.CURRENT_GROQ_MODEL = model
             logger.info("[LLM Config] Groq model set to %s", model)
         else:
             logger.warning(
-                "[LLM Config] Unknown Groq model '%s'. Available: %s",
+                "[LLM Config] Groq provider not available. Cannot set model '%s'.",
                 model,
-                cls.GROQ_MODELS,
             )
 
 
@@ -149,129 +283,31 @@ def call_llm(
         system_prompt: System context and instructions.
         user_message:  User turn content.
         provider:      Override provider; falls back to ``LLMConfig.DEFAULT_PROVIDER``.
-        temperature:   Sampling temperature (0–1).
+        temperature:   Sampling temperature (0-1).
         max_tokens:    Maximum response tokens.
 
     Returns:
         Response text, or ``None`` when all providers fail.
     """
     resolved = provider or LLMConfig.DEFAULT_PROVIDER
+    chain = _registry.get_priority_chain(preferred=resolved)
 
-    # Build an ordered list: preferred provider first, then remaining fallbacks
-    ordered: list[str] = []
-    if resolved:
-        ordered.append(resolved)
-    for p in LLMConfig.AVAILABLE_PROVIDERS:
-        if p not in ordered:
-            ordered.append(p)
-
-    _DISPATCH = {
-        "minimax":       _call_minimax,
-        "groq":          _call_groq,
-        "openai_custom": _call_openai_custom,
-    }
-
-    for attempt_provider in ordered:
-        fn = _DISPATCH.get(attempt_provider)
-        if fn is None:
-            logger.warning("[LLM] Unknown provider in AVAILABLE_PROVIDERS: %r", attempt_provider)
-            continue
+    for llm_provider in chain:
         try:
-            result = fn(system_prompt, user_message, temperature, max_tokens)
+            result = llm_provider.call(system_prompt, user_message, temperature, max_tokens)
             if result:
-                if attempt_provider != resolved:
-                    logger.info("[LLM] Used fallback provider: %s", attempt_provider)
+                if llm_provider.name != resolved:
+                    logger.info("[LLM] Used fallback provider: %s", llm_provider.name)
                 return result
         except Exception as exc:
-            logger.warning("[LLM] %s call failed (%s); trying next provider", attempt_provider, exc)
-
-    logger.error("[LLM] All providers exhausted. Providers tried: %s", ordered)
-    return None
-
-
-# ---------------------------------------------------------------------------
-# Private provider helpers
-# ---------------------------------------------------------------------------
-
-
-def _call_minimax(
-    system_prompt: str,
-    user_message: str,
-    temperature: float,
-    max_tokens: int,
-) -> Optional[str]:
-    """Call MiniMax M2.5 via the OpenAI-compatible international endpoint."""
-    if not LLMConfig.MINIMAX_API_KEY:
-        return None
-
-    client = OpenAI(
-        api_key=LLMConfig.MINIMAX_API_KEY,
-        base_url=_MINIMAX_BASE_URL,
-    )
-    resp = client.chat.completions.create(
-        model=_MINIMAX_MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_message},
-        ],
-        temperature=temperature,
-        max_tokens=max_tokens,
-    )
-    return resp.choices[0].message.content.strip()
-
-
-def _call_groq(
-    system_prompt: str,
-    user_message: str,
-    temperature: float,
-    max_tokens: int,
-) -> Optional[str]:
-    """Call Groq with the preferred model first, then configured fallbacks."""
-    if not LLMConfig.GROQ_API_KEY:
-        return None
-
-    client = Groq(api_key=LLMConfig.GROQ_API_KEY)
-    preferred = LLMConfig.CURRENT_GROQ_MODEL
-    models = [preferred] + [m for m in LLMConfig.GROQ_MODELS if m != preferred]
-
-    for model in models:
-        try:
-            resp = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user",   "content": user_message},
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens,
+            logger.warning(
+                "[LLM] %s call failed (%s); trying next provider",
+                llm_provider.name,
+                exc,
             )
-            return resp.choices[0].message.content.strip()
-        except Exception:
-            continue
+
+    logger.error(
+        "[LLM] All providers exhausted. Providers tried: %s",
+        [p.name for p in chain],
+    )
     return None
-
-
-def _call_openai_custom(
-    system_prompt: str,
-    user_message: str,
-    temperature: float,
-    max_tokens: int,
-) -> Optional[str]:
-    """Call an OpenAI-compatible custom endpoint (e.g. Ollama, LM Studio)."""
-    if not LLMConfig.OPENAI_CUSTOM_API_KEY or not LLMConfig.OPENAI_CUSTOM_ENDPOINT:
-        return None
-
-    client = OpenAI(
-        api_key=LLMConfig.OPENAI_CUSTOM_API_KEY,
-        base_url=LLMConfig.OPENAI_CUSTOM_ENDPOINT,
-    )
-    resp = client.chat.completions.create(
-        model=LLMConfig.OPENAI_CUSTOM_MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_message},
-        ],
-        temperature=temperature,
-        max_tokens=max_tokens,
-    )
-    return resp.choices[0].message.content.strip()

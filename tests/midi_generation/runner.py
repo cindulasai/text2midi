@@ -41,9 +41,8 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-# ── Bootstrap path so we can import src.* from anywhere ─────────────────────
+# ── Repo root for .env loading ─────────────────────────────────
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(_REPO_ROOT))
 
 # Load .env before importing anything that reads env vars
 from dotenv import load_dotenv

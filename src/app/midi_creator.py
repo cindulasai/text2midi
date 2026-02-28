@@ -7,12 +7,13 @@ Creates and manages MIDI files from track data.
 import mido
 from typing import List
 from src.app.models import Track, Note
+from src.config.constants import TICKS_PER_BEAT
 
 
 class MIDIGenerator:
     """Handles MIDI file creation."""
 
-    def __init__(self, ticks_per_beat: int = 480):
+    def __init__(self, ticks_per_beat: int = TICKS_PER_BEAT):
         self.ticks_per_beat = ticks_per_beat
 
     def create_midi(self, tracks: List[Track], tempo: int = 120) -> mido.MidiFile:

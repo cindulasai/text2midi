@@ -3,14 +3,18 @@
 Session Summary Node: Generate summary of the composition session.
 """
 
+import logging
+
 from src.agents.state import MusicState
+
+logger = logging.getLogger(__name__)
 
 
 def session_summary_agent_node(state: MusicState) -> MusicState:
     """
     Agent Node: Generate summary of the composition session.
     """
-    print("\n[INFO] [SESSION SUMMARY] Generating summary...")
+    logger.info("\n[INFO] [SESSION SUMMARY] Generating summary...")
     
     try:
         intent = state.get("intent")
@@ -41,7 +45,7 @@ def session_summary_agent_node(state: MusicState) -> MusicState:
             summary_parts.append(f"\n[OK] **MIDI file ready for download!**")
         
         state["session_summary"] = "\n".join(summary_parts)
-        print("[OK] Summary generated")
+        logger.info("[OK] Summary generated")
         
     except Exception as e:
         state["session_summary"] = "Could not generate summary"

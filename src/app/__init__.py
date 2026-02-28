@@ -9,10 +9,14 @@ from src.app.models import (
 )
 from src.app.generator import MusicGenerator
 from src.app.midi_creator import MIDIGenerator
-from src.app.intent_parser import IntentParser
 from src.app.track_planner import TrackPlanner
 from src.app.constants import (
     NOTE_TO_MIDI, DRUM_MAP, GM_INSTRUMENTS, SCALES, GENRE_CONFIG, CHORD_PROGRESSIONS
+)
+from src.app.errors import (  # noqa: F401
+    PipelineError, IntentParsingError, TrackPlanningError,
+    TheoryValidationError, GenerationError, MIDICreationError,
+    QualityAssessmentError, LLMProviderError,
 )
 
 __version__ = "2.0.0"
@@ -24,7 +28,6 @@ __all__ = [
     "CompositionSession",
     "MusicGenerator",
     "MIDIGenerator",
-    "IntentParser",
     "TrackPlanner",
     "NOTE_TO_MIDI",
     "DRUM_MAP",
@@ -32,4 +35,13 @@ __all__ = [
     "SCALES",
     "GENRE_CONFIG",
     "CHORD_PROGRESSIONS",
+    # Errors
+    "PipelineError",
+    "IntentParsingError",
+    "TrackPlanningError",
+    "TheoryValidationError",
+    "GenerationError",
+    "MIDICreationError",
+    "QualityAssessmentError",
+    "LLMProviderError",
 ]

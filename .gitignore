@@ -60,13 +60,31 @@ poetry.lock
 # Generated outputs (user MIDI files - do not commit)
 outputs/
 
+# Preset cache (user-specific, regenerated on demand)
+preset_cache.json
+
 # MIDI generation test artefacts
 tests/midi_generation/outputs/*.mid
 tests/midi_generation/reports/*.json
 tests/midi_generation/reports/*.md
 
 # Temporary files
+.archive/
 .archives/
 .cache/
 *.tmp
+
+# TUI log output
+logs/
+
+# Windows artifacts
+nul
+
+# Installer build artifacts
+text2midi.exe
+text2midi.bat
+text2midi.command
+installer/_launcher_stub.py
+installer/*.spec
+installer/build/
 

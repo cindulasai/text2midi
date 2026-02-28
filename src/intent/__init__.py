@@ -7,7 +7,7 @@ LLM-first engine backed by Pydantic v2 schema validation, chain-of-thought
 prompting, and musical coherence checks.
 """
 
-from src.intent.schema import ParsedIntent, GenreInfo, MoodInfo, TempoInfo, KeyInfo, DurationInfo
+from src.intent.schema import ParsedIntent, GenreInfo, MoodInfo, TempoInfo, KeyInfo, DurationInfo, TrackChannelInfo
 from src.intent.engine import LLMIntentEngine
 
 __all__ = [
@@ -18,4 +18,5 @@ __all__ = [
     "TempoInfo",
     "KeyInfo",
     "DurationInfo",
+    "TrackChannelInfo",
 ]

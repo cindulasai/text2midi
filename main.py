@@ -2,44 +2,87 @@
 """
 text2midi - Main Entry Point
 Command-line interface for AI-powered MIDI generation with LangGraph agentic architecture.
+
+Usage::
+
+    python main.py           # Normal run (auto-launches setup wizard on first run)
+    python main.py --setup   # Re-run the setup wizard to change/add providers
 """
 
+import argparse
 import sys
 import os
 from pathlib import Path
 from datetime import datetime
 import uuid
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent))
+from dotenv import load_dotenv
+load_dotenv()
+
+from src.config.log import setup_logging
+setup_logging()
 
 from src.agents.graph import get_agentic_graph, describe_graph
 from src.agents.state import MusicState
 from src.config.llm import call_llm, LLMConfig
+from src.config.constants import OUTPUT_DIR
+from src.config.settings import AppSettings
 import json
 import random
 
 
-def initialize_system():
-    """Initialize LLM configuration and required systems."""
+def initialize_system(run_wizard_if_needed: bool = True):
+    """Initialize LLM configuration and required systems.
+
+    If *run_wizard_if_needed* is True and no provider is configured,
+    the interactive setup wizard is launched automatically.
+    """
     print("\n[INIT] Starting text2midi...")
+
+    # Load persistent settings and push to environment
+    AppSettings.load()
+    if AppSettings.is_configured():
+        AppSettings.apply_to_environment()
+
     LLMConfig.initialize()
+
+    # If no provider is configured, offer the setup wizard
+    if not LLMConfig.DEFAULT_PROVIDER and run_wizard_if_needed:
+        print("[INIT] No LLM provider configured.")
+        print()
+        try:
+            answer = input(
+                "  Would you like to set up an AI provider now? "
+                "(Press Enter for Yes, or 'n' to skip): "
+            ).strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            answer = "n"
+
+        if answer != "n":
+            from src.config.setup_wizard import run_setup_wizard
+
+            if run_setup_wizard():
+                # Re-initialize after wizard completes
+                LLMConfig.initialize()
+            else:
+                print("[INIT] No provider configured. Some features will be limited.")
+                print("[INIT] Run 'python main.py --setup' anytime to configure.\n")
+        else:
+            print("[INIT] Skipped. Run 'python main.py --setup' anytime to configure.\n")
+
     provider = LLMConfig.DEFAULT_PROVIDER or "none configured"
     print(f"[INIT] Active LLM: {provider.upper()}")
-    if provider == "minimax":
-        print("[INIT] Model: MiniMax-M2.5 coding model (default)")
-    elif provider == "groq":
-        print(f"[INIT] Model: {LLMConfig.CURRENT_GROQ_MODEL} via Groq")
-    else:
-        print("[INIT] WARNING: No API key found. Set MINIMAX_API_KEY in .env")
+    if LLMConfig.AVAILABLE_PROVIDERS:
+        print(f"[INIT] Available providers: {', '.join(LLMConfig.AVAILABLE_PROVIDERS)}")
     print("[INIT] System ready.\n")
 
 
 def print_header():
     """Print application header."""
+    providers = ", ".join(LLMConfig.AVAILABLE_PROVIDERS) if LLMConfig.AVAILABLE_PROVIDERS else "none"
     print("\n" + "="*70)
     print("  text2midi - AI-Powered MIDI Composer")
-    print("  Powered by MiniMax M2.5 (coding model) | Groq")
+    print(f"  Active providers: {providers}")
     print("  Create music through natural language. No music knowledge required!")
     print("="*70)
     try:
@@ -339,12 +382,30 @@ def run_generation_workflow(prompt: str):
 
 def main():
     """Main entry point."""
-    # Initialize LLM first
+    parser = argparse.ArgumentParser(
+        description="text2midi — AI-Powered MIDI Composer",
+    )
+    parser.add_argument(
+        "--setup",
+        action="store_true",
+        help="Run the interactive setup wizard to configure an LLM provider.",
+    )
+    args = parser.parse_args()
+
+    # If --setup flag, run wizard directly
+    if args.setup:
+        from src.config.setup_wizard import run_setup_wizard
+
+        AppSettings.load()
+        run_setup_wizard()
+        return
+
+    # Initialize LLM (auto-launches wizard on first run)
     initialize_system()
     print_header()
     
     # Ensure outputs directory exists
-    Path("outputs").mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(exist_ok=True)
     
     # Interactive mode
     while True:

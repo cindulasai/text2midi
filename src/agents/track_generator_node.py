@@ -4,12 +4,11 @@ Track Generator Node: Generate actual musical tracks with advanced awareness.
 Uses AdvancedMusicGenerator which creates diverse, emotion-aware content.
 """
 
-import sys
+import logging
 from pathlib import Path
 from src.agents.state import MusicState
 
-# Add parent to path for importing app
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+logger = logging.getLogger(__name__)
 
 
 def track_generator_node(state: MusicState) -> MusicState:
@@ -22,7 +21,7 @@ def track_generator_node(state: MusicState) -> MusicState:
     - Generates genre-specific bass and drum patterns
     - Responds to style descriptors and emotions
     """
-    print("\n[PIANO] [TRACK GENERATOR] Generating aware musical tracks...")
+    logger.info("\n[PIANO] [TRACK GENERATOR] Generating aware musical tracks...")
     
     if state.get("error"):
         return state
@@ -38,11 +37,18 @@ def track_generator_node(state: MusicState) -> MusicState:
     try:
         # Import advanced tools
         from src.app import NOTE_TO_MIDI, Track
-        from src.midigent.advanced_generator import AdvancedMusicGenerator
-        from src.midigent.emotion_instruments import EmotionAwareInstrumentMapper
+        from src.analysis.advanced_generator import AdvancedMusicGenerator
+        from src.analysis.emotion_instruments import EmotionAwareInstrumentMapper
+        from src.config.genre_registry import get_genre, find_by_alias
         
         root_note = NOTE_TO_MIDI.get(intent.key_preference or "C", 60)
-        mode = "major" if "major" in intent.genre.lower() else "minor"
+        
+        # Determine mode from genre registry instead of naive string matching
+        genre_node = get_genre(intent.genre) or find_by_alias(intent.genre)
+        if genre_node:
+            mode = genre_node.default_scale
+        else:
+            mode = "major"  # safe default when genre not found
         bars = intent.duration_requested or 16
         
         # Initialize advanced generator with this session
@@ -55,12 +61,12 @@ def track_generator_node(state: MusicState) -> MusicState:
         
         generated_tracks = []
         
-        print(f"   Generating {len(track_plan)} tracks...")
-        print(f"   Style: {', '.join(style_descriptors) if style_descriptors else 'Default'}")
-        print(f"   Emotions: {', '.join(emotions) if emotions else 'None'}")
+        logger.info("   Generating %d tracks...", len(track_plan))
+        logger.info("   Style: %s", ', '.join(style_descriptors) if style_descriptors else 'Default')
+        logger.info("   Emotions: %s", ', '.join(emotions) if emotions else 'None')
         
         for i, config in enumerate(track_plan):
-            print(f"   [{i+1}/{len(track_plan)}] {config.track_type} ({config.instrument})")
+            logger.info("   [%d/%d] %s (%s)", i+1, len(track_plan), config.track_type, config.instrument)
             
             try:
                 # Generate based on track type with awareness
@@ -128,7 +134,7 @@ def track_generator_node(state: MusicState) -> MusicState:
                 generated_tracks.append(track)
                 
             except Exception as track_error:
-                print(f"      ⚠️  Generation for {config.track_type} had issue: {str(track_error)}")
+                logger.warning("      ⚠️  Generation for %s had issue: %s", config.track_type, str(track_error))
                 # Fall back to basic generation for this track
                 from src.app import MusicGenerator
                 fallback_gen = MusicGenerator()
@@ -163,12 +169,12 @@ def track_generator_node(state: MusicState) -> MusicState:
             "generator": "AdvancedMusicGenerator",
         }
         
-        print(f"[OK] Generated {len(generated_tracks)} tracks with advanced awareness")
+        logger.info("[OK] Generated %d tracks with advanced awareness", len(generated_tracks))
         
     except Exception as e:
         import traceback
         state["error"] = f"Track generation failed: {str(e)}\n{traceback.format_exc()}"
-        print(f"[ERROR] Error: {state['error']}")
+        logger.error("[ERROR] Error: %s", state['error'])
     
     return state
 

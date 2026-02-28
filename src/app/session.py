@@ -5,6 +5,7 @@ Session management utilities for MidiGen application.
 
 from pathlib import Path
 from src.app.models import CompositionSession
+from src.config.constants import OUTPUT_DIR
 
 
 def get_session_summary(session: CompositionSession) -> str:
@@ -35,6 +36,6 @@ def ensure_output_directory() -> Path:
     Returns:
         Path to output directory
     """
-    output_dir = Path("outputs")
+    output_dir = OUTPUT_DIR
     output_dir.mkdir(exist_ok=True)
     return output_dir

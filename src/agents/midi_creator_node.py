@@ -3,13 +3,13 @@
 MIDI Creator Node: Create final MIDI file from validated tracks.
 """
 
-import sys
+import logging
 from pathlib import Path
 from datetime import datetime
 from src.agents.state import MusicState
+from src.config.constants import OUTPUT_DIR
 
-# Add parent to path for importing app
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+logger = logging.getLogger(__name__)
 
 
 def midi_creation_agent_node(state: MusicState) -> MusicState:
@@ -17,10 +17,10 @@ def midi_creation_agent_node(state: MusicState) -> MusicState:
     Agent Node: Create final MIDI file from validated tracks.
     Saves to outputs directory with metadata.
     """
-    print("\n[SAVE] [MIDI CREATOR] Creating final MIDI file...")
+    logger.info("\n[SAVE] [MIDI CREATOR] Creating final MIDI file...")
     
     if state.get("error"):
-        print(f"   Skipping: {state['error']}")
+        logger.info("   Skipping: %s", state['error'])
         return state
     
     generated_tracks = state.get("generated_tracks", [])
@@ -39,23 +39,23 @@ def midi_creation_agent_node(state: MusicState) -> MusicState:
         midi = midi_gen.create_midi(generated_tracks, intent.tempo_preference or 120)
         
         # Save file
-        Path("outputs").mkdir(exist_ok=True)
+        OUTPUT_DIR.mkdir(exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         session_id = state.get("session_id", "unknown")[:8]
         filename = f"midigen_{intent.genre}_{session_id}_{timestamp}.mid"
-        filepath = Path("outputs") / filename
+        filepath = OUTPUT_DIR / filename
         
         midi.save(str(filepath))
         
         state["final_midi_path"] = str(filepath)
-        print(f"[OK] MIDI saved: {filename}")
-        print(f"   Tracks: {len(generated_tracks)}")
-        print(f"   Tempo: {intent.tempo_preference or 120} BPM")
-        print(f"   Duration: {state.get('generation_metadata', {}).get('bars', 16)} bars")
+        logger.info("[OK] MIDI saved: %s", filename)
+        logger.info("   Tracks: %d", len(generated_tracks))
+        logger.info("   Tempo: %s BPM", intent.tempo_preference or 120)
+        logger.info("   Duration: %s bars", state.get('generation_metadata', {}).get('bars', 16))
         
     except Exception as e:
         import traceback
         state["error"] = f"MIDI creation failed: {str(e)}\n{traceback.format_exc()}"
-        print(f"[ERROR] Error: {state['error']}")
+        logger.error("[ERROR] Error: %s", state['error'])
     
     return state

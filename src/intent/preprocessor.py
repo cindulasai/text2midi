@@ -40,6 +40,21 @@ _ABBREVIATIONS: dict[str, str] = {
     r"\bsec\b(?=\s|$|,)": "seconds",
     r"\bmins\b": "minutes",
     r"\bsecs\b": "seconds",
+    # World music abbreviations
+    r"\bkpop\b": "k-pop",
+    r"\bjpop\b": "j-pop",
+    r"\bafrobeat\b": "afrobeat",
+    r"\bbossa\b": "bossa nova",
+    r"\bcumbia\b": "cumbia",
+    r"\breggae\b": "reggae",
+    r"\btrap\b": "trap",
+    r"\bdrill\b": "drill",
+    r"\bphonk\b": "phonk",
+    r"\bgtr\b": "guitar",
+    r"\bvox\b": "vocals",
+    r"\bstrgs\b": "strings",
+    r"\bhh\b": "hi-hat",
+    r"\bperc\b": "percussion",
 }
 
 
@@ -52,6 +67,7 @@ class ExtractedNumbers:
     duration_seconds: Optional[int] = None
     duration_bars: Optional[int] = None
     track_count: Optional[int] = None
+    channel_count: Optional[int] = None
     time_signature: Optional[str] = None
 
     def summary(self) -> str:
@@ -65,6 +81,8 @@ class ExtractedNumbers:
             parts.append(f"Duration: {self.duration_bars} bars (explicitly stated)")
         if self.track_count:
             parts.append(f"Track count: {self.track_count} (explicitly stated)")
+        if self.channel_count:
+            parts.append(f"Channel count: {self.channel_count} (explicitly stated)")
         if self.time_signature:
             parts.append(f"Time signature: {self.time_signature} (explicitly stated)")
         return "; ".join(parts) if parts else ""
@@ -151,10 +169,53 @@ def extract_hard_numbers(text: str) -> ExtractedNumbers:
     if bar_match:
         nums.duration_bars = int(bar_match.group(1))
 
-    # Track count
-    track_match = re.search(r"(\d{1,2})\s*(?:tracks?|instruments?)\b", text_lower)
+    # Track count: "5 tracks", "create 5 track", "5-track"
+    track_match = re.search(r"(\d{1,2})\s*[-\s]?(?:tracks?|instruments?)\b", text_lower)
     if track_match:
-        nums.track_count = int(track_match.group(1))
+        val = int(track_match.group(1))
+        if 1 <= val <= 16:
+            nums.track_count = val
+
+    # Channel count: "8 channels", "8 channel", "8-channel"
+    channel_match = re.search(r"(\d{1,2})\s*[-\s]?(?:channels?)\b", text_lower)
+    if channel_match:
+        val = int(channel_match.group(1))
+        if 1 <= val <= 16:
+            nums.channel_count = val
+
+    # Infer duration from "N minutes length" or "of N minutes" if not already found
+    # Handles: "5 minutes length", "of 3 minutes", "N minute long"
+    if nums.duration_seconds is None:
+        alt_min_patterns = [
+            r"(\d{1,3})\s*(?:minutes?|mins?)\s*(?:length|long)\b",
+            r"(?:of|about|around|approximately)\s+(\d{1,3})\s*(?:minutes?|mins?)",
+        ]
+        for pat in alt_min_patterns:
+            m = re.search(pat, text_lower)
+            if m:
+                nums.duration_seconds = int(m.group(1)) * 60
+                break
+
+    # Cross-reference: "N track...of minutes" — if track_count was extracted
+    # and nearby text says "minutes" without a number, try to use track_count
+    # value as the minute count (common phrasing: "5 track...5 minutes")
+    # Only if we still don't have duration and the phrasing strongly suggests it.
+    if nums.duration_seconds is None:
+        # "X ... of minutes length" or "X ... minutes length" where X is nearby
+        min_length_match = re.search(
+            r"(\d{1,3})\s+.*?(?:of\s+)?(?:minutes?|mins?)\s*(?:length|long|duration)?",
+            text_lower,
+        )
+        if min_length_match:
+            candidate = int(min_length_match.group(1))
+            # Only use if it's a plausible minute count (1-60) and not already
+            # consumed as track/channel count, or if it IS the track count
+            # and there's explicit "minutes" nearby
+            if 1 <= candidate <= 60:
+                # Check that "minutes" appears after this number's context
+                after_num = text_lower[min_length_match.start():]
+                if re.search(r"minutes?\s*(?:length|long|duration)", after_num):
+                    nums.duration_seconds = candidate * 60
 
     # Time signature: "3/4", "6/8", "4/4"
     ts_match = re.search(r"\b(\d{1,2}/\d{1,2})\b", text)
