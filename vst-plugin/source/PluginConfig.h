@@ -14,7 +14,7 @@ namespace text2midi
 inline constexpr const char* kBackendHost       = "127.0.0.1";
 inline constexpr int         kBackendPort       = 18323;
 inline constexpr const char* kBackendBaseUrl    = "http://127.0.0.1:18323";
-inline constexpr const char* kServerExeName     = "text2midi-server.exe";
+inline constexpr const char* kServerExeName     = "text2midi-backend.exe";
 
 // ── HTTP Timeouts (ms) ─────────────────────────────────────────────────────
 inline constexpr int kHealthTimeoutMs           = 2000;
@@ -26,8 +26,8 @@ inline constexpr int kBackendLaunchTimeoutMs    = 10000;
 inline constexpr int kBackendPollIntervalMs     = 500;
 
 // ── Plugin UI ───────────────────────────────────────────────────────────────
-inline constexpr int kPluginWidth               = 550;
-inline constexpr int kPluginHeight              = 650;
+inline constexpr int kPluginWidth               = 620;
+inline constexpr int kPluginHeight              = 800;
 
 // ── Pipeline Nodes ──────────────────────────────────────────────────────────
 inline constexpr int kTotalNodes                = 8;

@@ -32,5 +32,14 @@ private:
     /** Search for the server executable in known locations. */
     static juce::File findServerExecutable();
 
+    /** Attempt to launch the Python backend server directly (fallback). */
+    static bool launchPythonServer (juce::ChildProcess& process);
+
+    /** Find the project root (where server.py lives). */
+    static juce::File findProjectRoot();
+
+    /** Find an executable on PATH. */
+    static juce::File findOnPath (const juce::String& name);
+
     BackendLauncher() = delete;
 };

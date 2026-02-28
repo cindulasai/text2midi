@@ -47,10 +47,16 @@ public:
 private:
     Listener* listener = nullptr;
 
+    juce::Label          titleLabel;
     juce::Label          summaryLabel;
+    juce::Label          qualityLabel;
+    juce::Label          midiPathLabel;
     juce::ListBox        trackList;
     DraggableMidiFile    draggable;
-    juce::TextButton     changeKeyButton { "Change API Key" };
+    juce::TextButton     openFolderButton { "Open Folder" };
+    juce::TextButton     changeKeyButton  { "Settings" };
+
+    juce::String lastMidiPath;
 
     // Track data
     struct TrackRow
@@ -58,6 +64,7 @@ private:
         int channel;
         juce::String instrument;
         int noteCount;
+        juce::String trackType;
     };
 
     juce::Array<TrackRow> tracks;

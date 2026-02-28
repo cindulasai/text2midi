@@ -17,23 +17,38 @@ Text2MidiEditor::Text2MidiEditor (Text2MidiProcessor& p)
       apiKeyPanel (p)
 {
     setSize (text2midi::kPluginWidth, text2midi::kPluginHeight);
-    setResizable (false, false);
+    setResizable (true, true);
+    setResizeLimits (500, 600, 900, 1200);
 
     auto textCol    = juce::Colour (text2midi::kColText);
     auto subtextCol = juce::Colour (text2midi::kColSubtext);
 
     // ── Title ────────────────────────────────────────────────────────────────
     titleLabel.setText ("text2midi", juce::dontSendNotification);
-    titleLabel.setFont (juce::Font (juce::FontOptions (20.0f).withStyle ("Bold")));
+    titleLabel.setFont (juce::Font (juce::FontOptions (22.0f).withStyle ("Bold")));
     titleLabel.setColour (juce::Label::textColourId, textCol);
-    titleLabel.setJustificationType (juce::Justification::centred);
+    titleLabel.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (titleLabel);
 
+    // ── Subtitle ─────────────────────────────────────────────────────────────
+    subtitleLabel.setText ("AI-Powered MIDI Composer", juce::dontSendNotification);
+    subtitleLabel.setFont (juce::Font (juce::FontOptions (11.0f)));
+    subtitleLabel.setColour (juce::Label::textColourId, subtextCol);
+    subtitleLabel.setJustificationType (juce::Justification::centredLeft);
+    addAndMakeVisible (subtitleLabel);
+
+    // ── Version ──────────────────────────────────────────────────────────────
+    versionLabel.setText (juce::String ("v") + text2midi::kPluginVersion, juce::dontSendNotification);
+    versionLabel.setFont (juce::Font (juce::FontOptions (10.0f)));
+    versionLabel.setColour (juce::Label::textColourId, juce::Colour (text2midi::kColOverlay0));
+    versionLabel.setJustificationType (juce::Justification::centredRight);
+    addAndMakeVisible (versionLabel);
+
     // ── Connection indicator ─────────────────────────────────────────────────
-    connectionLabel.setText ("Checking server...", juce::dontSendNotification);
+    connectionLabel.setText ("Connecting to server...", juce::dontSendNotification);
     connectionLabel.setFont (juce::Font (juce::FontOptions (11.0f)));
-    connectionLabel.setColour (juce::Label::textColourId, subtextCol);
-    connectionLabel.setJustificationType (juce::Justification::centred);
+    connectionLabel.setColour (juce::Label::textColourId, juce::Colour (text2midi::kColYellow));
+    connectionLabel.setJustificationType (juce::Justification::centredRight);
     addAndMakeVisible (connectionLabel);
 
     // ── Panels ───────────────────────────────────────────────────────────────
@@ -43,6 +58,9 @@ Text2MidiEditor::Text2MidiEditor (Text2MidiProcessor& p)
     // Show API key panel only if not yet configured
     if (processorRef.hasApiKeyConfigured())
         apiKeyPanel.setVisible (false);
+
+    genrePresetPanel.setListener (this);
+    addAndMakeVisible (genrePresetPanel);
 
     promptPanel.setListener (this);
     addAndMakeVisible (promptPanel);
@@ -56,7 +74,7 @@ Text2MidiEditor::Text2MidiEditor (Text2MidiProcessor& p)
 
     // ── Backend launch + health polling ──────────────────────────────────────
     launchBackend();
-    startTimerHz (1);   // 1 Hz initially, drops to 0.2 Hz once connected
+    startTimerHz (1);
 }
 
 Text2MidiEditor::~Text2MidiEditor()
@@ -68,31 +86,53 @@ Text2MidiEditor::~Text2MidiEditor()
 void Text2MidiEditor::paint (juce::Graphics& g)
 {
     g.fillAll (juce::Colour (text2midi::kColBase));
+
+    // Subtle top gradient for header area
+    auto headerArea = getLocalBounds().removeFromTop (56).toFloat();
+    juce::ColourGradient headerGrad (
+        juce::Colour (text2midi::kColSurface0).withAlpha (0.5f), 0, 0,
+        juce::Colour (text2midi::kColBase), 0, headerArea.getBottom(),
+        false);
+    g.setGradientFill (headerGrad);
+    g.fillRect (headerArea);
 }
 
 void Text2MidiEditor::resized()
 {
-    auto area = getLocalBounds().reduced (10);
+    auto area = getLocalBounds().reduced (12);
 
-    titleLabel.setBounds (area.removeFromTop (36));
-    connectionLabel.setBounds (area.removeFromTop (18));
-    area.removeFromTop (6);
+    // Header: title + subtitle on left, version + connection on right
+    auto headerRow = area.removeFromTop (28);
+    titleLabel.setBounds (headerRow.removeFromLeft (200));
+    versionLabel.setBounds (headerRow.removeFromRight (60));
+    connectionLabel.setBounds (headerRow);
 
+    subtitleLabel.setBounds (area.removeFromTop (16));
+    area.removeFromTop (8);
+
+    // API key panel (conditionally visible)
     if (apiKeyPanel.isVisible())
     {
         apiKeyPanel.setBounds (area.removeFromTop (200));
         area.removeFromTop (6);
     }
 
-    promptPanel.setBounds (area.removeFromTop (100));
+    // Genre presets
+    genrePresetPanel.setBounds (area.removeFromTop (90));
     area.removeFromTop (6);
 
+    // Prompt panel
+    promptPanel.setBounds (area.removeFromTop (130));
+    area.removeFromTop (6);
+
+    // Progress panel (conditionally visible)
     if (progressPanel.isVisible())
     {
         progressPanel.setBounds (area.removeFromTop (60));
         area.removeFromTop (6);
     }
 
+    // Output panel fills remaining space
     if (outputPanel.isVisible())
     {
         outputPanel.setBounds (area);
@@ -126,18 +166,45 @@ void Text2MidiEditor::updateConnectionStatus (bool connected)
 
     if (connected)
     {
-        connectionLabel.setText (juce::CharPointer_UTF8 ("\xf0\x9f\x9f\xa2 Server connected"),
+        connectionLabel.setText (juce::CharPointer_UTF8 ("\xf0\x9f\x9f\xa2 Connected"),
                                  juce::dontSendNotification);
         connectionLabel.setColour (juce::Label::textColourId, juce::Colour (text2midi::kColGreen));
-        startTimerHz (1);   // Slow the polling once connected
+        startTimerHz (1);
+
+        // Fetch model info from backend
+        fetchModelInfo();
     }
     else
     {
         connectionLabel.setText (juce::CharPointer_UTF8 ("\xf0\x9f\x94\xb4 Server offline"),
                                  juce::dontSendNotification);
         connectionLabel.setColour (juce::Label::textColourId, juce::Colour (text2midi::kColRed));
-        startTimerHz (2);   // Poll faster when disconnected
+        startTimerHz (2);
     }
+}
+
+//==============================================================================
+// Fetch model info from backend /health endpoint
+//==============================================================================
+
+void Text2MidiEditor::fetchModelInfo()
+{
+    juce::Thread::launch ([this]()
+    {
+        auto healthInfo = HttpClient::getHealthInfo();
+
+        if (! healthInfo.isVoid())
+        {
+            auto provider = healthInfo.getProperty ("provider", "").toString();
+            auto version  = healthInfo.getProperty ("version", "").toString();
+
+            juce::MessageManager::callAsync ([this, provider, version]()
+            {
+                if (provider.isNotEmpty())
+                    promptPanel.setModelInfo (provider, version);
+            });
+        }
+    });
 }
 
 //==============================================================================
@@ -168,7 +235,7 @@ void Text2MidiEditor::apiKeyConfigured()
     apiKeyPanel.setVisible (false);
     resized();
 
-    // Re-check health with the new config
+    // Re-check health with the new config and fetch model info
     juce::Thread::launch ([this]()
     {
         bool healthy = HttpClient::checkHealth();
@@ -186,17 +253,9 @@ void Text2MidiEditor::generateRequested (const juce::String& prompt)
     outputPanel.clear();
     resized();
 
-    // Simulate node-by-node progress then call generate
     juce::Thread::launch ([this, prompt]()
     {
         auto sessionId = juce::Uuid().toString().substring (0, 8);
-
-        // Update progress on message thread
-        static const juce::StringArray nodeNames {
-            "Intent Parser", "Track Planner", "Theory Validator",
-            "Track Generator", "Quality Control", "Refinement",
-            "MIDI Creator", "Session Summary"
-        };
 
         auto result = HttpClient::generate (prompt, sessionId);
 
@@ -234,4 +293,9 @@ void Text2MidiEditor::changeApiKeyRequested()
     apiKeyPanel.setVisible (true);
     apiKeyPanel.loadFromState();
     resized();
+}
+
+void Text2MidiEditor::genrePresetSelected (const juce::String& prompt)
+{
+    promptPanel.setPromptText (prompt);
 }

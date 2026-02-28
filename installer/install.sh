@@ -55,6 +55,7 @@ echo "    2. uv            (fast package manager — if not installed)"
 echo "    3. App libraries  (downloaded into a local folder)"
 echo "    4. AI provider    (optional — you can skip and set up later)"
 echo "    5. Launcher       (a script you can run or double-click)"
+echo "    6. VST3 Plugin    (optional — for use inside DAWs)"
 echo ""
 echo "  Your personal files are NEVER touched."
 echo ""
@@ -70,9 +71,11 @@ ARCH="$(uname -m)"
 # ── Network check ────────────────────────────────────────────────
 info "Checking internet connection..."
 NET_OK=0
-if ping -c 1 -W 4 dns.google &>/dev/null; then NET_OK=1
-elif ping -c 1 -W 4 8.8.8.8 &>/dev/null; then NET_OK=1
-elif ping -c 1 -W 4 1.1.1.1 &>/dev/null; then NET_OK=1
+# macOS (BSD) ping -W is milliseconds; Linux (iputils) ping -W is seconds
+if [[ "$OS" == "Darwin" ]]; then _PW=4000; else _PW=4; fi
+if ping -c 1 -W "$_PW" dns.google &>/dev/null; then NET_OK=1
+elif ping -c 1 -W "$_PW" 8.8.8.8 &>/dev/null; then NET_OK=1
+elif ping -c 1 -W "$_PW" 1.1.1.1 &>/dev/null; then NET_OK=1
 fi
 
 if [[ "$NET_OK" == "1" ]]; then
@@ -88,10 +91,10 @@ fi
 echo ""
 
 # ================================================================
-#  STEP 1 / 5  —  Python Runtime
+#  STEP 1 / 6  —  Python Runtime
 # ================================================================
 echo "  ──────────────────────────────────────────────────────────────"
-echo "   Step 1 of 5 : Python Runtime"
+echo "   Step 1 of 6 : Python Runtime"
 echo "  ──────────────────────────────────────────────────────────────"
 
 find_python() {
@@ -190,10 +193,10 @@ fi
 echo ""
 
 # ================================================================
-#  STEP 2 / 5  —  uv Package Manager
+#  STEP 2 / 6  —  uv Package Manager
 # ================================================================
 echo "  ──────────────────────────────────────────────────────────────"
-echo "   Step 2 of 5 : Package Manager (uv)"
+echo "   Step 2 of 6 : Package Manager (uv)"
 echo "  ──────────────────────────────────────────────────────────────"
 
 if command -v uv &>/dev/null; then
@@ -240,10 +243,10 @@ fi
 echo ""
 
 # ================================================================
-#  STEP 3 / 5  —  Dependencies
+#  STEP 3 / 6  —  Dependencies
 # ================================================================
 echo "  ──────────────────────────────────────────────────────────────"
-echo "   Step 3 of 5 : Installing App Dependencies"
+echo "   Step 3 of 6 : Installing App Dependencies"
 echo "  ──────────────────────────────────────────────────────────────"
 info "This may take 2-3 minutes on first run..."
 cd "$PROJECT_DIR"
@@ -271,10 +274,10 @@ fi
 echo ""
 
 # ================================================================
-#  STEP 4 / 5  —  AI Provider Setup  (OPTIONAL)
+#  STEP 4 / 6  —  AI Provider Setup  (OPTIONAL)
 # ================================================================
 echo "  ──────────────────────────────────────────────────────────────"
-echo "   Step 4 of 5 : AI Provider Setup  (optional)"
+echo "   Step 4 of 6 : AI Provider Setup  (optional)"
 echo "  ──────────────────────────────────────────────────────────────"
 echo ""
 echo "  text2midi uses an AI model to turn your words into music."
@@ -289,7 +292,7 @@ echo "  No credit card required."
 echo ""
 read -rp "  Press ENTER to set up now, or S to skip for later: " setup_choice
 
-if [[ "${setup_choice,,}" == "s" ]]; then
+if [[ "$setup_choice" == [sS] ]]; then
     echo ""
     ok "Skipped — no problem!  You can set up anytime:"
     echo "       uv run python main.py --setup"
@@ -310,10 +313,10 @@ fi
 echo ""
 
 # ================================================================
-#  STEP 5 / 5  —  Create Launcher
+#  STEP 5 / 6  —  Create Launcher
 # ================================================================
 echo "  ──────────────────────────────────────────────────────────────"
-echo "   Step 5 of 5 : Creating Launcher"
+echo "   Step 5 of 6 : Creating Launcher"
 echo "  ──────────────────────────────────────────────────────────────"
 
 # Shell launcher (always works)
@@ -355,8 +358,79 @@ Categories=Audio;Music;
 EOF
     ok "Created desktop menu entry for text2midi"
 fi
+echo ""
 
 # ── Done! ────────────────────────────────────────────────────────
+
+# ================================================================
+#  STEP 6 / 6  —  VST3 Plugin Installation  (OPTIONAL)
+# ================================================================
+echo "  ──────────────────────────────────────────────────────────────"
+echo "   Step 6 of 6 : VST3 Plugin for DAW  (optional)"
+echo "  ──────────────────────────────────────────────────────────────"
+echo ""
+echo "  If you use a DAW (Ableton Live, FL Studio, Bitwig, Reaper)"
+echo "  you can install the text2midi VST3 plugin to generate MIDI"
+echo "  directly inside your DAW."
+echo ""
+
+read -rp "  Press ENTER to install VST3 plugin, or S to skip: " vst_choice
+
+if [[ "$vst_choice" == [sS] ]]; then
+    echo ""
+    ok "Skipped VST3 plugin installation."
+    echo "       You can install it later by running:"
+    echo "         bash installer/install_vst.sh"
+else
+    echo ""
+    # Determine VST3 directory
+    if [[ "$OS" == "Darwin" ]]; then
+        VST3_SYSTEM_DIR="$HOME/Library/Audio/Plug-Ins/VST3"
+    else
+        VST3_SYSTEM_DIR="$HOME/.vst3"
+    fi
+
+    VST3_SOURCE=""
+    # Check Release build
+    if [[ -d "$PROJECT_DIR/vst-plugin/build/text2midi_artefacts/Release/VST3/text2midi.vst3" ]]; then
+        VST3_SOURCE="$PROJECT_DIR/vst-plugin/build/text2midi_artefacts/Release/VST3/text2midi.vst3"
+    fi
+    # Check Debug build
+    if [[ -z "$VST3_SOURCE" && -d "$PROJECT_DIR/vst-plugin/build/text2midi_artefacts/Debug/VST3/text2midi.vst3" ]]; then
+        VST3_SOURCE="$PROJECT_DIR/vst-plugin/build/text2midi_artefacts/Debug/VST3/text2midi.vst3"
+    fi
+
+    if [[ -z "$VST3_SOURCE" ]]; then
+        warn "Pre-built VST3 plugin not found."
+        echo "         The plugin must be compiled from C++ source first."
+        echo "         See: vst-plugin/BUILDING.md"
+        echo "         After building, run:  bash installer/install_vst.sh"
+    else
+        VST3_DEST="$VST3_SYSTEM_DIR/text2midi.vst3"
+        mkdir -p "$VST3_SYSTEM_DIR" 2>/dev/null
+        # Remove old installation if present
+        [[ -d "$VST3_DEST" ]] && rm -rf "$VST3_DEST" 2>/dev/null
+        # Copy
+        info "Installing text2midi.vst3 to $VST3_DEST..."
+        cp -R "$VST3_SOURCE" "$VST3_DEST" 2>/dev/null
+        if [[ ! -d "$VST3_DEST" ]]; then
+            info "Requesting elevated privileges..."
+            sudo cp -R "$VST3_SOURCE" "$VST3_DEST" 2>/dev/null
+        fi
+        if [[ -d "$VST3_DEST" ]]; then
+            # Remove macOS quarantine
+            [[ "$OS" == "Darwin" ]] && xattr -dr com.apple.quarantine "$VST3_DEST" 2>/dev/null || true
+            ok "VST3 plugin installed to: $VST3_DEST"
+            echo "       Rescan plugins in your DAW — look for 'text2midi' under Instruments."
+        else
+            warn "Could not install VST3 plugin."
+            echo "         Try: bash installer/install_vst.sh"
+        fi
+    fi
+fi
+echo ""
+
+# ── Final summary ────────────────────────────────────────────────
 echo ""
 printf "${BOLD}${CYAN}"
 echo "  ================================================================"
@@ -373,6 +447,10 @@ echo ""
 echo "    To set up or change your AI provider later:"
 echo "      uv run python main.py --setup"
 echo "      Or press Ctrl+S inside the app"
+echo ""
+echo "    VST3 Plugin (for DAW users):"
+echo "      - If installed, rescan plugins in your DAW"
+echo "      - To install later:  bash installer/install_vst.sh"
 echo ""
 echo "  ================================================================"
 printf "${NC}\n"

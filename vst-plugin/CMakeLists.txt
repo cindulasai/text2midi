@@ -21,6 +21,7 @@ target_sources(text2midi PRIVATE
     source/PluginProcessor.cpp
     source/PluginEditor.cpp
     source/ApiKeyPanel.cpp
+    source/GenrePresetPanel.cpp
     source/PromptPanel.cpp
     source/OutputPanel.cpp
     source/DraggableMidiFile.cpp
