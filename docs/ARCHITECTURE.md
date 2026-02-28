@@ -99,12 +99,16 @@ Output: outputs/text2midi_{genre}_{hash}_{timestamp}.mid
 
 ## LLM Provider Stack
 
+text2midi supports 15+ AI providers. Auto-selects available provider at startup:
+
 | Priority | Provider | Model | API Key |
 |----------|----------|-------|---------|
-| 1 (default) | MiniMax M2.5 | MiniMax-M2.5 (coding model) | `MINIMAX_API_KEY` |
-| 2 (fallback) | Groq | llama-4-maverick | `GROQ_API_KEY` |
+| 1st | Groq | llama-3.3-70b or llama-4-maverick | `GROQ_API_KEY` |
+| 2nd | OpenAI | GPT-4o | `OPENAI_API_KEY` |
+| 3rd | Anthropic | Claude 3.5 Sonnet | `ANTHROPIC_API_KEY` |
+| ... | **15+ total** | See [docs/GETTING_STARTED.md](GETTING_STARTED.md) for full list | `*_API_KEY` |
 
-Provider is auto-selected at startup based on which API key is present.
+First available key is used automatically. User can specify preference in Settings (Ctrl+S in TUI).
 
 ## MIDI Output Spec
 

@@ -11,30 +11,58 @@ text2midi is an AI-powered music composition engine that:
 - Outputs standard MIDI files compatible with any DAW
 - Evolves compositions through multi-turn conversations
 - Works with **15+ AI providers** — use whichever you already have
+- Stores API keys securely in OS Keyring (never plain text)
 
-## 🚀 Quick Start (30 seconds)
+## 🚀 Quick Start: Two Installation Options
 
-### Step 1: Install
+### Option 1: One-Touch Installer (Easiest - Recommended! ⭐)
+
+If you're new to coding, use the installer:
+
+**Windows:**
+```bash
+installer/install.bat
+```
+
+**macOS/Linux:**
+```bash
+bash installer/install.sh
+```
+
+The installer will:
+- ✅ Detect/install Python 3.11+ automatically
+- ✅ Install uv and all dependencies
+- ✅ Help you get a **free API key** (Groq, Gemini, or OpenRouter)
+- ✅ Create a desktop launcher and shortcuts
+- ✅ Secure your API key in OS Keyring
+
+[📖 Full Installer Details](../installer/README.md)
+
+### Option 2: Manual Setup (For Developers)
+
+If you know Python/terminal:
 
 ```bash
+# Step 1: Clone and enter directory
 cd text2midi
+
+# Step 2: Install dependencies with uv
 uv sync          # or: pip install -r requirements.txt
+
+# Step 3: Run and setup
+python main_tui.py     # Terminal UI (recommended)
+# or
+python main.py         # CLI
 ```
 
-### Step 2: Run & Setup
-
-```bash
-python main.py
-```
-
-**That's it!** On first run, the app auto-launches an interactive setup wizard that:
+On first run, the app auto-launches an interactive setup wizard that:
 1. Shows you the available AI providers (free and paid)
-2. Gives you the direct URL to get an API key
+2. Gives you direct URLs to get free API keys
 3. Lets you paste your key
 4. Tests the connection instantly
-5. Saves everything — you never have to do this again
+5. **Securely stores your key in OS Keyring** — you never edit `.env` files!
 
-> **No `.env` file editing required.** The wizard handles everything.
+> **Security**: Your API keys are stored securely in your OS's credential manager (Windows Credential Manager, macOS Keychain, Linux Secret Service) — never as plain text in files.
 
 ### Step 3: Create Music
 
@@ -81,12 +109,14 @@ You only need **ONE** provider. Here's a comparison:
 ## 🔧 Re-configure Anytime
 
 ```bash
-# Re-run the setup wizard
-python main.py --setup
+# Run the Terminal UI and press Ctrl+S
+python main_tui.py
 
-# Or for the TUI version
-python main_tui.py     # Use the Settings panel (Ctrl+S)
+# Or re-run setup wizard from CLI
+python main.py --setup
 ```
+
+Your keys are stored securely in OS Keyring, not in files.
 
 ---
 
@@ -103,16 +133,16 @@ Run AI models on your own computer — no API key, no internet, no cost:
 ollama pull llama3.2
 
 # 3. Run text2midi — it auto-detects Ollama!
-python main.py
+python main_tui.py
 ```
 
-The setup wizard will detect Ollama automatically and offer it as an option.
+The setup wizard will detect Ollama automatically and offer it as an option. No API key needed!
 
 ---
 
-## 📋 Alternative: Manual .env Configuration
+## (Optional) Manual `.env` Configuration
 
-If you prefer, you can configure providers via a `.env` file instead of the wizard:
+The setup wizard is the easiest way to configure providers. However, if you prefer to use a `.env` file for development or scripting:
 
 ```bash
 cp .env.example .env
@@ -128,7 +158,9 @@ GEMINI_API_KEY=your_key_here            # Free tier — aistudio.google.com
 MINIMAX_API_KEY=your_key_here           # Paid — platform.minimaxi.com
 ```
 
-> **Provider priority:** text2midi uses the first available key it finds. Configure multiple providers for automatic fallback.
+> **Security Note**: On first run, text2midi automatically moves your keys from `.env` to secure OS Keyring storage. The `.env` file is only read if keyring is unavailable as a fallback.
+>
+> **Provider priority:** text2midi tries each configured provider until one works. We recommend Groq as the default.
 
 
 ---

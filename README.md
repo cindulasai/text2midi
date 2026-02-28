@@ -2,17 +2,43 @@
 
 **text2midi**: Transform text descriptions into professional multi-track MIDI compositions using AI. Generate music instantly through natural language conversation.
 
-## 🎵 Quick Start
+## 🚀 Quick Start
+
+### One-Touch Installer (Easiest)
+
+**First time?** Use the installer for automated setup:
+
+**Windows:**
+```bash
+# Run installer
+installer/install.bat
+```
+
+**macOS/Linux:**
+```bash
+# Run installer
+bash installer/install.sh
+```
+
+The installer will:
+- Detect/install Python 3.11+ automatically
+- Install uv and dependencies
+- Help you set up a free API key (Groq/Gemini/OpenRouter)
+- Create a desktop launcher and shortcuts
+
+📖 [**Full Installer Guide**](installer/README.md)
+
+### Developer Setup (Manual)
 
 ```bash
-# Install with uv (recommended)
+# Install with uv
 uv sync
 
-# Run the Web UI (Gradio)
-python main.py
-
-# Run the Terminal UI
+# Run the Terminal UI (with settings: Ctrl+S)
 python main_tui.py
+
+# Or run the CLI
+python main.py
 ```
 
 ### VST3 Plugin
@@ -31,6 +57,22 @@ See [vst-plugin/README.md](vst-plugin/README.md) for installation — load `text
 
 **Full documentation**: [text2midi Documentation Hub](docs/DOCUMENTATION_HUB.md)
 
+## 🔒 Security Features
+
+Your API keys are **never** saved as plain text. text2midi uses industry-standard secure storage:
+
+- **Windows**: Keys stored in Windows Credential Manager
+- **macOS**: Keys stored in Keychain
+- **Linux**: Keys stored in Secret Service (GNOME Keyring, etc.)
+
+Additional security:
+- **Automatic Redaction**: API keys are redacted from all logs (patterns: `gsk_`, `sk-`, `key-`, `AIza`, `xai-`, etc.)
+- **Secure Permissions**: Config files are restricted to your user only (Unix: `chmod 600`, Windows: `icacls`)
+- **No `.env` Distribution**: Default `.env` is never versioned with real keys
+- **Zero Key Leakage**: The logging system automatically detects and masks sensitive data
+
+See [Security Guide](docs/SECURITY.md) for more details.
+
 ## 📂 What's Inside
 
 ### Project Structure
@@ -43,13 +85,50 @@ src/app/                    # Main application
 ├── midi_creator.py         # MIDI file creation (MIDIGenerator)
 ├── track_planner.py        # Track planning (TrackPlanner)
 ├── intent_parser.py        # NLP understanding (IntentParser)
-├── session.py              # Session utilities
+└── session.py              # Session utilities
 
-src/config/                 # Configuration
+src/config/                 # Configuration & Security
+├── keyring_store.py        # Secure OS keyring integration [NEW]
+├── settings.py             # Settings manager with keyring
+├── log.py                  # Logging with API key redaction [NEW]
+├── provider_catalog.py     # LLM provider configurations
+├── setup_wizard.py         # Interactive setup wizard
 └── llm.py                  # LLM provider management
 
 src/agents/                 # LangGraph agents
-src/midigent/               # Advanced music generation engines
+├── base_agent.py           # Base agent structure
+├── music_agent.py          # Music composition agent
+├── generation_agent.py     # MIDI generation agent
+└── refinement_agent.py     # Composition refinement agent
+
+src/midigent/              # Advanced music generation engines
+├── engines/
+│   ├── ambient_engine.py   # Ambient soundscape generation
+│   ├── orchestral_engine.py # Orchestral composition
+│   └── ...                 # Genre-specific engines
+└── utils/
+
+installer/                 # One-touch installer [NEW]
+├── install.bat             # Windows installer
+├── install.sh              # macOS/Linux installer
+├── build_launcher.py       # PyInstaller exe builder
+├── README.md               # Installation guide
+└── checksums.json          # Verification hashes
+
+docs/                      # Documentation
+├── SECURITY.md             # Security & keyring guide [NEW]
+├── GETTING_STARTED.md      # Quick start guide
+├── MIDI_GENERATION_GUIDE.md # Full guide
+├── ARCHITECTURE.md         # System architecture
+├── DAW_*.md                # DAW integration guides
+├── plans/                  # Implementation details
+│   └── ONE_TOUCH_INSTALLER_PLAN.md
+└── specs/                  # Specifications
+
+vst-plugin/                # VST3 plugin (C++ JUCE)
+├── src/                    # Plugin source code
+├── python-backend/         # Python music generation backend
+└── BUILDING.md             # Build instructions
 ```
 
 ## 🎯 Features
@@ -64,9 +143,10 @@ src/midigent/               # Advanced music generation engines
 - Multi-turn conversations for iterative building
 - Music theory-aware generation
 
-🤖 **Powered by MiniMax M2.5**
-- Default LLM: [MiniMax M2.5](https://platform.minimaxi.com/) (state-of-the-art coding model)
-- Fallback: Groq (llama-4-maverick / llama-3.3-70b)
+🤖 **Powered by 15+ AI Providers**
+- Recommended: Groq (free, ultra-fast, excellent quality)
+- Also supports: OpenAI, Claude, Gemini, Ollama, OpenRouter, and more
+- Choose your provider, use any API key
 
 🎛️ **Professional Output**
 - Standard MIDI format (compatible with all DAWs)
@@ -113,23 +193,52 @@ generator = MusicGenerator()
 
 ## 🔧 Configuration
 
-### LLM Providers
+### Setup Wizard (Recommended)
 
-text2midi uses **MiniMax M2.5** by default — a state-of-the-art coding model. Set your API key and it will be used automatically. Groq serves as fallback.
-
-| Priority | Provider | Model | Get Key |
-|----------|----------|-------|---------|
-| 1st (default) | **MiniMax M2.5** | MiniMax-M2.5 | [platform.minimaxi.com](https://platform.minimaxi.com/) |
-| 2nd (fallback) | Groq | llama-4-maverick | [console.groq.com](https://console.groq.com/) |
-
-### Environment Variables
-
-Copy `.env.example` to `.env` and fill in your keys:
+On first run, text2midi launches an interactive wizard:
 
 ```bash
-MINIMAX_API_KEY=your-key-here   # Default provider
-GROQ_API_KEY=your-key-here      # Fallback
+python main_tui.py     # Press Ctrl+S to open Settings
 ```
+
+The wizard will:
+1. Show available AI providers (Groq, OpenAI, Claude, Gemini, etc.)
+2. Provide direct links to get free API keys
+3. Validate your key instantly
+4. **Securely store your key in OS Keyring** (never plain text!)
+
+### LLM Providers
+
+text2midi supports **15+ AI providers**, including:
+
+| Provider | Free Option | Speed | Quality | Setup |
+|----------|-------------|-------|---------|-------|
+| **Groq** | ⭐ Yes | Ultra-fast | Excellent | [console.groq.com](https://console.groq.com/) |
+| **Google Gemini** | ⭐ Yes | Fast | Very Good | [aistudio.google.com](https://aistudio.google.com/) |
+| **Ollama** | ⭐ Yes (offline) | Depends on PC | Good | [ollama.com](https://ollama.com/) |
+| **OpenAI** | GPT-4o | Fast | Excellent | [platform.openai.com](https://platform.openai.com/) |
+| **Anthropic** | Claude | Fast | Excellent | [console.anthropic.com](https://console.anthropic.com/) |
+| **OpenRouter** | 100+ models | Varies | High | [openrouter.ai](https://openrouter.ai/) |
+
+### Manual Configuration
+
+You can also configure via `.env` file (though keyring is recommended):
+
+```bash
+cp .env.example .env
+```
+
+Add your API keys:
+```bash
+# You only need ONE of these:
+GROQ_API_KEY=gsk_your_key_here          # Free
+OPENAI_API_KEY=sk-your_key_here         # Paid
+ANTHROPIC_API_KEY=sk-ant-your_key_here  # Paid
+GEMINI_API_KEY=your_key_here            # Free tier
+OLLAMA_API_BASE=http://localhost:11434  # Offline
+```
+
+> **Note**: Keys are automatically moved to OS Keyring on first run. The `.env` is only read if keyring is unavailable.
 
 ## 📊 Output
 
@@ -148,6 +257,8 @@ Open with any MIDI-compatible tool:
 | Topic | Link |
 |-------|------|
 | Getting Started | [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) |
+| Security & API Keys | [docs/SECURITY.md](docs/SECURITY.md) |
+| One-Touch Installer | [installer/README.md](installer/README.md) |
 | MIDI Generation Guide | [docs/MIDI_GENERATION_GUIDE.md](docs/MIDI_GENERATION_GUIDE.md) |
 | Ableton Live | [docs/DAW_ABLETON_LIVE.md](docs/DAW_ABLETON_LIVE.md) |
 | Surge XT | [docs/DAW_SURGE_XT.md](docs/DAW_SURGE_XT.md) |
@@ -195,7 +306,7 @@ cd vst-plugin/python-backend && python -m pytest test_server.py -v  # Backend te
 - **Python**: 3.11+
 - **Dependencies**: See [pyproject.toml](pyproject.toml)
 - **MIDI**: mido library
-- **LLM**: At least one of: MiniMax or Groq API key
+- **LLM**: One of 15+ supported providers (Groq recommended - free)
 
 ## 📦 Installation Methods
 
@@ -240,12 +351,12 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-**Created with ❤️ by developers for musicians and music developers**
+**Built with ❤️ by Sai Cindula (vision & design) and AI agents (code) — for the music tech community.**
 
 ## Tech Stack
 
-- **MIDI**: mido
-- **LLM**: MiniMax M2.5 coding model (default), Groq
+- **LLM**: 15+ providers supported (Groq, OpenAI, Claude, Gemini, etc.)
+- **Keyring**: Windows Credential Manager, macOS Keychain, Linux Secret Service
 - **Agents**: LangGraph
 - **TUI**: Textual (Python)
 - **VST3**: JUCE 6.0.8 (C++) + FastAPI backend (Python)
