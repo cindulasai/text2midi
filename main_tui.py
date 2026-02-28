@@ -209,6 +209,12 @@ class Text2MidiApp(App):
     def _expand_api_panel(self) -> None:
         widget = self.query_one("#api-key-widget", ApiKeySetup)
         widget.display = True
+        # Refresh the quick-switch bar and provider label when panel opens
+        try:
+            widget._refresh_current_provider_label()
+            widget._refresh_quick_switch_bar()
+        except Exception:
+            pass
 
     def _push_model_info(self) -> None:
         """Send the active model name to the prompt widget."""

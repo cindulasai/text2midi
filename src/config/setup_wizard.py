@@ -228,12 +228,19 @@ def run_setup_wizard() -> bool:
     # ── API key input ───────────────────────────────────────────────
     api_key = ""
     while not api_key:
-        api_key = _secure_input("  Paste your API key (hidden): ")
+        api_key = _input("  Paste your API key: ")
         if not api_key:
             retry = _input("  No key entered. Try again? [Y/n]: ")
             if retry.lower() == "n":
                 _print("\nSetup cancelled.", "yellow")
                 return False
+
+    # Show masked key so user can confirm it was pasted correctly
+    if len(api_key) > 10:
+        masked = api_key[:6] + "..." + api_key[-4:]
+    else:
+        masked = "*" * len(api_key)
+    _print(f"  Key received: {masked}", "dim")
 
     # ── Model selection ─────────────────────────────────────────────
     model = selected.default_model

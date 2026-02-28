@@ -256,6 +256,70 @@ class ProviderRegistry:
 # ---------------------------------------------------------------------------
 
 
+def _validate_via_http(
+    provider_id: str,
+    api_key: str,
+    model: str,
+    base_url: str,
+) -> tuple[bool, str]:
+    """Fallback validation using a direct HTTP request.
+
+    This avoids LiteLLM's error-message mangling so we can inspect
+    the actual HTTP status code returned by the provider.
+    """
+    try:
+        import httpx
+    except ImportError:
+        return False, "httpx not installed — cannot validate directly."
+
+    # Build the OpenAI-compatible chat completion payload
+    url = (base_url.rstrip("/") + "/chat/completions") if base_url else ""
+    if not url:
+        return False, "No endpoint URL to validate against."
+
+    headers = {
+        "Content-Type": "application/json",
+    }
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    # Strip any litellm prefixes like "openai/", "groq/" from model name
+    raw_model = model.split("/", 1)[-1] if "/" in model else model
+
+    payload = {
+        "model": raw_model,
+        "messages": [{"role": "user", "content": "Say OK"}],
+        "max_tokens": 16,
+        "temperature": 0,
+    }
+
+    try:
+        resp = httpx.post(url, json=payload, headers=headers, timeout=30.0)
+        if resp.status_code == 200:
+            return True, f"Connected to {provider_id}."
+        if resp.status_code == 401:
+            return False, "Invalid API key (HTTP 401). Please check and try again."
+        if resp.status_code == 403:
+            return False, "Access denied (HTTP 403). Check your API key permissions."
+        if resp.status_code == 404:
+            return False, f"Model '{raw_model}' not found (HTTP 404). Check the model name."
+        if resp.status_code == 429:
+            return False, "Rate limited (HTTP 429). Wait a moment and try again."
+        # Try to extract a message from the response body
+        try:
+            body = resp.json()
+            detail = body.get("error", {}).get("message", "") or body.get("message", "")
+        except Exception:
+            detail = resp.text[:200]
+        return False, f"HTTP {resp.status_code}: {detail[:200]}"
+    except httpx.ConnectError:
+        return False, "Cannot connect. Check your internet or endpoint URL."
+    except httpx.TimeoutException:
+        return False, "Connection timed out. Check your internet or endpoint URL."
+    except Exception as exc:
+        return False, f"HTTP error: {str(exc)[:200]}"
+
+
 def validate_api_key(
     provider_id: str,
     api_key: str = "",
@@ -265,7 +329,30 @@ def validate_api_key(
     """Test an API key by making a tiny LiteLLM completion call.
 
     Returns ``(success, message)``.
+
+    Uses direct HTTP validation as a fallback for providers where
+    LiteLLM's error handling is unreliable (e.g. MiniMax, custom
+    OpenAI-compatible endpoints).
     """
+    # -----------------------------------------------------------
+    # For providers routed through OpenAI-compat (minimax, custom
+    # endpoints, etc.) use a direct HTTP call for more reliable
+    # status-code inspection.
+    # -----------------------------------------------------------
+    use_direct_http = provider_id in (
+        "minimax", "openai_custom", "custom",
+    ) or (base_url and "openai" in model.split("/")[0].lower())
+
+    if use_direct_http and base_url:
+        ok, msg = _validate_via_http(provider_id, api_key, model, base_url)
+        if ok:
+            return ok, msg
+        # If HTTP validation returned an auth error, trust it
+        if "401" in msg or "403" in msg:
+            return False, msg
+        # For non-auth errors, fall through to LiteLLM as second try
+        logger.debug("Direct HTTP validation failed (%s), trying LiteLLM...", msg)
+
     try:
         import litellm
 
@@ -274,7 +361,7 @@ def validate_api_key(
         kwargs: dict = {
             "model": model,
             "messages": [{"role": "user", "content": "Say OK"}],
-            "max_tokens": 5,
+            "max_tokens": 16,
             "temperature": 0,
         }
         if api_key:
@@ -283,19 +370,30 @@ def validate_api_key(
             kwargs["api_base"] = base_url
 
         resp = litellm.completion(**kwargs)
+        # If we got a response object at all (HTTP 200), the key is valid.
+        # Some providers (e.g. MiniMax) may return empty/whitespace
+        # content for very short prompts — that's still a valid auth.
         content = resp.choices[0].message.content or ""
         if content.strip():
             return True, f"Connected to {provider_id}."
-        return False, "API returned empty response."
+        # HTTP 200 with empty content — key is still valid
+        return True, f"Connected to {provider_id} (key accepted)."
     except Exception as exc:
         msg = str(exc)
-        # Provide user-friendly error messages
-        if "401" in msg or "auth" in msg.lower() or "invalid" in msg.lower():
-            return False, "Invalid API key. Please check and try again."
+        # Provide user-friendly error messages based on HTTP codes
+        if "401" in msg or "unauthorized" in msg.lower():
+            return False, "Invalid API key (401 Unauthorized). Please check and try again."
+        if "403" in msg:
+            return False, "Access denied (403 Forbidden). Check your API key permissions."
         if "404" in msg:
             return False, f"Model '{model}' not found. Check the model name."
-        if "429" in msg or "rate" in msg.lower():
+        if "429" in msg or "rate limit" in msg.lower():
             return False, "Rate limited. Wait a moment and try again."
         if "connection" in msg.lower() or "connect" in msg.lower():
             return False, "Cannot connect. Check your internet or endpoint URL."
+        if "timeout" in msg.lower():
+            return False, "Connection timed out. Check your internet or endpoint URL."
+        # Don't flag "invalid" generically — it catches non-auth errors
+        if "invalid api key" in msg.lower() or "invalid_api_key" in msg.lower():
+            return False, "Invalid API key. Please check and try again."
         return False, f"Error: {msg[:200]}"

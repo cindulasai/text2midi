@@ -48,13 +48,23 @@ Footer {
     padding: 1 2;
     margin-bottom: 1;
     height: auto;
-    max-height: 16;
+    max-height: 30;
+    overflow-y: auto;
 }
 
 #api-key-setup .title {
     text-style: bold;
     color: #f5c2e7;
     margin-bottom: 1;
+}
+
+#api-key-setup .status-info {
+    color: #a6e3a1;
+    margin-bottom: 1;
+}
+
+#api-key-setup .dim-label {
+    color: #6c7086;
 }
 
 #api-key-setup Select {
@@ -85,6 +95,26 @@ Footer {
 
 #api-key-setup .conditional-fields.visible {
     display: block;
+}
+
+/* Quick-switch bar */
+#quick-switch-bar {
+    height: auto;
+    margin-bottom: 1;
+    width: 100%;
+}
+
+.quick-switch-btn {
+    min-width: 12;
+    width: auto;
+    margin-right: 1;
+    height: 3;
+}
+
+#divider-label {
+    color: #585b70;
+    margin-top: 1;
+    margin-bottom: 1;
 }
 
 /* ---------- Prompt Input Panel ---------- */

@@ -56,7 +56,19 @@ STUB_CODE = textwrap.dedent(r'''
                 return c
         return None
 
+    def _set_windows_taskbar_icon() -> None:
+        """Set a unique AppUserModelID so Windows shows our .exe icon in the taskbar."""
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                "text2midi.app.launcher"
+            )
+        except Exception:
+            pass  # non-Windows or missing API — silently ignore
+
     def main() -> None:
+        _set_windows_taskbar_icon()
+
         # Determine the project directory (exe lives inside it)
         if getattr(sys, "frozen", False):
             project_dir = os.path.dirname(os.path.abspath(sys.executable))
@@ -133,6 +145,7 @@ def build_exe() -> Path | None:
     print("  [..] Building launcher executable (this takes about a minute)...")
 
     exe_name = LAUNCHER_NAME
+    icon_path = INSTALLER_DIR / "text2midi.ico"
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "--onefile",
@@ -143,8 +156,10 @@ def build_exe() -> Path | None:
         "--specpath", str(INSTALLER_DIR),
         "--clean",
         "--noconfirm",
-        str(STUB_PATH),
     ]
+    if icon_path.exists():
+        cmd += ["--icon", str(icon_path)]
+    cmd.append(str(STUB_PATH))
 
     for attempt in range(1, 4):
         try:
