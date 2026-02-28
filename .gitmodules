@@ -1,3 +1,0 @@
-[submodule "vst-plugin/libs/JUCE"]
-	path = vst-plugin/libs/JUCE
-	url = https://github.com/juce-framework/JUCE.git

@@ -147,19 +147,6 @@ I've created comprehensive, user-friendly documentation to help new users unders
 - **Tests:** 32/32 passing in `tests/test_tui/`
 - **Source:** `main_tui.py`, `src/tui/`, `src/config/settings.py`
 
-### VST3 Plugin (TASKS-002) — ✅ Complete
-**Binary:** `text2midi.vst3` (5.0 MB, MSVC 2022 x64)
-
-- **Framework:** JUCE 6.0.8 (C++), FastAPI backend (Python)
-- **Architecture:** Plugin ↔ HTTP ↔ Python backend server (port 18323)
-- **Plugin UI:** ApiKeyPanel, PromptPanel, ProgressPanel, OutputPanel, DraggableMidiFile (native OS drag-and-drop to DAW)
-- **Backend:** 4 endpoints (health, configure, generate, stream SSE), full LangGraph pipeline
-- **Build:** 0 errors, 0 warnings with MSVC 2022 + CMake 3.29
-- **Bundle:** PyInstaller standalone executable (41 MB)
-- **Installer:** Inno Setup script for Windows distribution
-- **Tests:** 12/12 backend tests passing
-- **Source:** `vst-plugin/source/` (C++), `vst-plugin/python-backend/` (Python)
-
 ### Web UI (Original)
 **Entry point:** `python main.py` → http://localhost:7860
 

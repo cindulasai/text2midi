@@ -16,16 +16,6 @@ Welcome! This guide will help you install **text2midi**, the AI-powered MIDI com
 4. Follow the on-screen prompts.
 5. When done, double-click **text2midi.exe** (or **text2midi.bat**) in the project folder.
 
-#### VST3 Plugin Only (for DAW users)
-
-If you only want to install the VST3 plugin for your DAW:
-
-1. **Double-click `install_vst.bat`** in the `installer` folder.
-2. Follow the prompts — it installs the VST3 plugin and optionally the backend server.
-3. Open your DAW, rescan plugins, and add "text2midi" as an instrument.
-
-> The main `install.bat` also offers VST3 installation as Step 6 (with a skip option).
-
 ### macOS
 
 1. Download or clone this project.
@@ -37,12 +27,6 @@ If you only want to install the VST3 plugin for your DAW:
    ```
 4. When done, double-click **text2midi.command** in Finder, or run `./text2midi` from Terminal.
 
-#### VST3 Plugin Only (for DAW users)
-
-```
-bash installer/install_vst.sh
-```
-
 ### Linux
 
 1. Download or clone this project.
@@ -53,12 +37,6 @@ bash installer/install_vst.sh
    bash installer/install.sh
    ```
 4. When done, run `./text2midi` from the project folder, or find **text2midi** in your application menu.
-
-#### VST3 Plugin Only (for DAW users)
-
-```
-bash installer/install_vst.sh
-```
 
 ---
 
@@ -108,10 +86,6 @@ text2midi needs an AI provider to turn your text into music. Here are some **com
 | **Exe not created** | That is fine — use **text2midi.bat** (Windows) or `./text2midi` (macOS/Linux) instead. |
 | **"Permission denied" on macOS/Linux** | Run `chmod +x installer/install.sh` then try again. |
 | **App launches but shows errors** | Make sure you completed a `uv sync` (the installer does this automatically). |
-| **VST3 plugin not found in DAW** | Rescan plugins in your DAW. Check that `text2midi.vst3` is in the correct VST3 folder (see "What Gets Installed" below). |
-| **VST3 "Server offline" in DAW** | Start the backend server manually: `cd vst-plugin\python-backend && python server.py` |
-| **VST3 install needs admin** | Right-click `install_vst.bat` → "Run as administrator" (Windows), or use `sudo bash installer/install_vst.sh` (macOS/Linux). |
-| **VST3 build not found** | The C++ plugin must be compiled first. See `vst-plugin/BUILDING.md` for instructions. |
 
 ---
 
@@ -123,8 +97,6 @@ text2midi needs an AI provider to turn your text into music. Here are some **com
 | **uv** | Fast package manager | `~/.local/bin/` |
 | **App dependencies** | Libraries the app uses | Project `.venv/` folder |
 | **Launcher** | The app shortcut | Project root |
-| **VST3 Plugin** | DAW instrument plugin (optional) | `C:\Program Files\Common Files\VST3\` (Win) / `~/Library/Audio/Plug-Ins/VST3/` (macOS) / `~/.vst3/` (Linux) |
-| **Backend Server** | Server for VST plugin (optional) | `C:\Program Files\text2midi\` (Win) / `/usr/local/lib/text2midi-backend/` (macOS) / `~/.local/lib/text2midi-backend/` (Linux) |
 
 > Your personal files are **never** modified. All app data goes into the project folder or standard config directories.
 
@@ -135,14 +107,6 @@ text2midi needs an AI provider to turn your text into music. Here are some **com
 1. Delete the project folder — that removes the app and all dependencies.
 2. (Optional) Uninstall uv: `pip uninstall uv` or delete `~/.local/bin/uv`.
 3. (Optional) Uninstall Python if you installed it just for this.
-4. (Optional) Remove VST3 plugin:
-   - **Windows:** Delete `C:\Program Files\Common Files\VST3\text2midi.vst3\`
-   - **macOS:** Delete `~/Library/Audio/Plug-Ins/VST3/text2midi.vst3`
-   - **Linux:** Delete `~/.vst3/text2midi.vst3`
-5. (Optional) Remove backend server:
-   - **Windows:** Delete `C:\Program Files\text2midi\` and remove "text2midi-server" from `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
-   - **macOS:** Delete `/usr/local/lib/text2midi-backend/`, `/usr/local/bin/text2midi-backend`, and `~/Library/LaunchAgents/com.text2midi.server.plist`
-   - **Linux:** Delete `~/.local/lib/text2midi-backend/`, `~/.local/bin/text2midi-backend`, and `~/.config/autostart/text2midi-server.desktop`
 
 ---
 

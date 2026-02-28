@@ -30,7 +30,6 @@ echo    2. uv            (fast package manager - if not installed)
 echo    3. App libraries  (downloaded into a local folder)
 echo    4. AI provider    (optional - you can skip and set up later)
 echo    5. Launcher       (text2midi.exe you can double-click)
-echo    6. VST3 Plugin    (optional - for use inside DAWs)
 echo.
 echo  Your personal files are NEVER touched.
 echo  App config is stored in: %%LOCALAPPDATA%%\text2midi\
@@ -72,11 +71,11 @@ if "!NET_OK!"=="1" (
 )
 
 :: ================================================================
-::  STEP 1 / 6  —  Python Runtime
+::  STEP 1 / 5  —  Python Runtime
 :: ================================================================
 echo.
 echo  ──────────────────────────────────────────────────────────────
-echo   Step 1 of 6 : Python Runtime
+echo   Step 1 of 5 : Python Runtime
 echo  ──────────────────────────────────────────────────────────────
 set "PYTHON_CMD="
 set "PYTHON_OK=0"
@@ -206,10 +205,10 @@ if !errorlevel! equ 0 (
 echo.
 
 :: ================================================================
-::  STEP 2 / 6  —  uv Package Manager
+::  STEP 2 / 5  —  uv Package Manager
 :: ================================================================
 echo  ──────────────────────────────────────────────────────────────
-echo   Step 2 of 6 : Package Manager (uv)
+echo   Step 2 of 5 : Package Manager (uv)
 echo  ──────────────────────────────────────────────────────────────
 
 where uv >nul 2>&1
@@ -277,10 +276,10 @@ if %errorlevel% equ 0 (
 echo.
 
 :: ================================================================
-::  STEP 3 / 6  —  Dependencies
+::  STEP 3 / 5  —  Dependencies
 :: ================================================================
 echo  ──────────────────────────────────────────────────────────────
-echo   Step 3 of 6 : Installing App Dependencies
+echo   Step 3 of 5 : Installing App Dependencies
 echo  ──────────────────────────────────────────────────────────────
 echo  [..] This may take 2-3 minutes on first run...
 
@@ -316,10 +315,10 @@ if "!DEP_OK!"=="1" (
 echo.
 
 :: ================================================================
-::  STEP 4 / 6  —  AI Provider Setup  (OPTIONAL)
+::  STEP 4 / 5  —  AI Provider Setup  (OPTIONAL)
 :: ================================================================
 echo  ──────────────────────────────────────────────────────────────
-echo   Step 4 of 6 : AI Provider Setup  (optional)
+echo   Step 4 of 5 : AI Provider Setup  (optional)
 echo  ──────────────────────────────────────────────────────────────
 echo.
 echo  text2midi uses an AI model to turn your words into music.
@@ -354,10 +353,10 @@ if /i "!SETUP_CHOICE!"=="s" (
 )
 
 :: ================================================================
-::  STEP 5 / 6  —  Create Launcher
+::  STEP 5 / 5  —  Create Launcher
 :: ================================================================
 echo  ──────────────────────────────────────────────────────────────
-echo   Step 5 of 6 : Creating Launcher
+echo   Step 5 of 5 : Creating Launcher
 echo  ──────────────────────────────────────────────────────────────
 
 :: Try building a real .exe (small ~5 MB wrapper)
@@ -403,127 +402,6 @@ del "%TEMP%\text2midi_*.exe" 2>nul
 del "%TEMP%\text2midi_*.ps1" 2>nul
 
 echo.
-:: ================================================================
-::  STEP 6 / 6  —  VST3 Plugin Installation  (OPTIONAL)
-:: ================================================================
-echo  ──────────────────────────────────────────────────────────────
-echo   Step 6 of 6 : VST3 Plugin for DAW  (optional)
-echo  ──────────────────────────────────────────────────────────────
-echo.
-echo  If you use a DAW (Ableton Live, FL Studio, Bitwig, Reaper)
-echo  you can install the text2midi VST3 plugin to generate MIDI
-echo  directly inside your DAW.
-echo.
-echo  This step will:
-echo    - Copy the VST3 plugin to the system VST3 folder
-echo    - Install the backend server that the plugin talks to
-echo.
-set /p "VST_CHOICE=  Press ENTER to install VST3 plugin, or S to skip: "
-
-if /i "!VST_CHOICE!"=="s" (
-    echo.
-    echo  [OK] Skipped VST3 plugin installation.
-    echo       You can install it later by running:
-    echo         installer\install_vst.bat
-    echo.
-    goto :vst_done
-)
-
-echo.
-echo  [..] Installing VST3 plugin...
-
-:: ── Check if pre-built VST3 bundle exists ──────────────────────
-set "VST3_SOURCE="
-set "VST3_DEST=%CommonProgramFiles%\VST3\text2midi.vst3"
-
-:: Check build output first
-if exist "%PROJECT_DIR%\vst-plugin\build\text2midi_artefacts\Release\VST3\text2midi.vst3" (
-    set "VST3_SOURCE=%PROJECT_DIR%\vst-plugin\build\text2midi_artefacts\Release\VST3\text2midi.vst3"
-)
-:: Then check Debug build
-if "!VST3_SOURCE!"=="" (
-    if exist "%PROJECT_DIR%\vst-plugin\build\text2midi_artefacts\Debug\VST3\text2midi.vst3" (
-        set "VST3_SOURCE=%PROJECT_DIR%\vst-plugin\build\text2midi_artefacts\Debug\VST3\text2midi.vst3"
-    )
-)
-
-if "!VST3_SOURCE!"=="" (
-    echo  [NOTE] Pre-built VST3 plugin not found.
-    echo         The VST3 plugin must be compiled from C++ source first.
-    echo         See: vst-plugin\BUILDING.md for build instructions.
-    echo.
-    echo         After building, run:  installer\install_vst.bat
-    echo.
-    goto :vst_done
-)
-
-:: ── Copy VST3 plugin (needs admin for Program Files) ───────────
-echo  [..] Copying text2midi.vst3 to %VST3_DEST%...
-
-:: Try direct copy first (works if user has admin privileges in this session)
-xcopy /E /I /Y "!VST3_SOURCE!" "!VST3_DEST!" >nul 2>&1
-if !errorlevel! equ 0 (
-    echo  [OK] VST3 plugin installed to: !VST3_DEST!
-    goto :vst_backend
-)
-
-:: Need elevation — write a temp script and run it as admin
-set "VST_COPY_SCRIPT=%TEMP%\text2midi_vst_copy.bat"
-echo @echo off > "!VST_COPY_SCRIPT!"
-echo xcopy /E /I /Y "!VST3_SOURCE!" "!VST3_DEST!" >> "!VST_COPY_SCRIPT!"
-echo  [..] Requesting administrator privileges to copy to Program Files...
-powershell -Command "Start-Process cmd -ArgumentList '/c \"%VST_COPY_SCRIPT%\"' -Verb RunAs -Wait" 2>nul
-del "!VST_COPY_SCRIPT!" 2>nul
-
-:: Verify the copy succeeded — check the destination folder exists and has files
-if exist "!VST3_DEST!" (
-    dir /B "!VST3_DEST!" 2>nul | findstr /R "." >nul 2>&1
-    if !errorlevel! equ 0 (
-        echo  [OK] VST3 plugin installed to: !VST3_DEST!
-        goto :vst_backend
-    )
-)
-
-echo  [WARNING] Could not copy VST3 plugin to system folder.
-echo            You can copy it manually:
-echo            From: !VST3_SOURCE!
-echo            To:   !VST3_DEST!
-goto :vst_done
-
-:vst_backend
-:: ── Install backend server ─────────────────────────────────────
-set "BACKEND_SOURCE=%PROJECT_DIR%\vst-plugin\python-backend\dist\text2midi-backend"
-set "BACKEND_DEST=%ProgramFiles%\text2midi"
-
-if exist "!BACKEND_SOURCE!\text2midi-backend.exe" (
-    echo  [..] Installing backend server to !BACKEND_DEST!...
-
-    xcopy /E /I /Y "!BACKEND_SOURCE!" "!BACKEND_DEST!" >nul 2>&1
-    if !errorlevel! neq 0 (
-        set "BE_COPY_SCRIPT=%TEMP%\text2midi_be_copy.bat"
-        echo @echo off > "!BE_COPY_SCRIPT!"
-        echo xcopy /E /I /Y "!BACKEND_SOURCE!" "!BACKEND_DEST!" >> "!BE_COPY_SCRIPT!"
-        powershell -Command "Start-Process cmd -ArgumentList '/c \"%BE_COPY_SCRIPT%\"' -Verb RunAs -Wait" 2>nul
-        del "!BE_COPY_SCRIPT!" 2>nul
-    )
-
-    if exist "!BACKEND_DEST!\text2midi-backend.exe" (
-        echo  [OK] Backend server installed to: !BACKEND_DEST!
-    ) else (
-        echo  [NOTE] Backend server not copied -- it can run from the project folder.
-    )
-) else (
-    echo  [NOTE] Backend server executable not found.
-    echo         Build it with:  cd vst-plugin\python-backend ^& python build_backend.py
-    echo         The VST3 plugin will try to find the server automatically.
-)
-
-echo.
-echo  [OK] VST3 plugin installation complete!
-echo       Rescan plugins in your DAW -- look for "text2midi" under Instruments.
-echo.
-
-:vst_done
 
 :: ================================================================
 ::  Done!
@@ -546,10 +424,6 @@ echo.
 echo     To set up or change your AI provider later:
 echo       uv run python main.py --setup    (from command line)
 echo       Ctrl+S                            (inside the app)
-echo.
-echo     VST3 Plugin (for DAW users):
-echo       - If installed, rescan plugins in your DAW
-echo       - To install later:  installer\install_vst.bat
 echo.
 echo  ================================================================
 echo.

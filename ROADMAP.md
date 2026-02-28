@@ -138,41 +138,7 @@
 - [x] Notification toasts, generation timeout at 120s
 - [x] 32 tests: AppSettings, HistoryManager, PromptSuggester, TUI App integration
 
-### Phase 6: VST3 Plugin (TASKS-002) ✅
-**Duration:** February 25–26, 2026  
-**Status:** Complete (33/33 tasks, 12/12 backend tests, 0 C++ warnings)
-
-**Python Backend Server**
-- [x] FastAPI server on 127.0.0.1:18323 with lifespan handler
-- [x] GET /health, POST /configure, POST /generate, GET /generate/stream (SSE)
-- [x] Full LangGraph pipeline integration (8 nodes)
-- [x] In-memory result caching with 5-minute expiry
-- [x] 12 unit tests with httpx AsyncClient
-- [x] Manual end-to-end testing (MIDI files generated successfully)
-
-**PyInstaller Bundle**
-- [x] build_backend.py with hidden imports for full pipeline
-- [x] 41 MB standalone bundle, tested with /health endpoint
-
-**JUCE C++ Plugin (9 source files)**
-- [x] CMakeLists.txt + JUCE 6.0.8 submodule
-- [x] PluginProcessor (stereo output, ValueTree state with XOR-obfuscated API key)
-- [x] PluginEditor (DragAndDropContainer, Timer health polling, auto-launch backend)
-- [x] HttpClient (juce::URL, InputStreamOptions chained pattern)
-- [x] BackendLauncher (3-location search, ChildProcess, health polling)
-- [x] ApiKeyPanel, PromptPanel, ProgressPanel, OutputPanel
-- [x] DraggableMidiFile (native OS drag-and-drop, SettableTooltipClient)
-- [x] PluginConfig.h (Catppuccin Mocha colours, port 18323, dimensions 550x650)
-- [x] Builds with MSVC 2022 + CMake 3.29 — 0 errors, 0 warnings
-- [x] 5.0 MB VST3 binary output
-
-**Build & Packaging**
-- [x] Inno Setup installer script (VST3 + server + optional startup)
-- [x] README.md (features, installation, troubleshooting, DAW compatibility)
-- [x] BUILDING.md (developer build instructions)
-- [x] Asset placeholders for logo and screenshots
-
-### Phase 7: LLM Intent Parsing Engine (PLAN-003) ✅
+### Phase 6: LLM Intent Parsing Engine (PLAN-003) ✅
 **Duration:** February 27, 2026  
 **Status:** Complete (50/50 tests)
 
@@ -233,7 +199,6 @@
 
 ### Code Delivery
 - **Python files created:** 25+
-- **C++ files created:** 19 (9 source pairs + PluginConfig.h)
 - **Configuration files:** 5
 - **Documentation files:** 30+
 - **Total files:** 69+
@@ -241,7 +206,7 @@
 - **Lines of documentation:** 6,500+
 - **Type coverage:** 100% (Python)
 - **Error handlers:** 50+
-- **Test suites:** 3 (TUI: 32 tests, Backend: 12 tests, Intent Engine: 50 tests)
+- **Test suites:** 2 (TUI: 32 tests, Intent Engine: 50 tests)
 
 ### Architecture
 - **Agents:** 8 (all complete)
