@@ -1,6 +1,6 @@
-# text2midi - AI-Powered MIDI Composer
+# text2midi - Multi-Agent AI MIDI Composer
 
-**text2midi**: Transform text descriptions into professional multi-track MIDI compositions using AI. Generate music instantly through natural language conversation.
+**text2midi**: A multi-agent AI system that transforms natural language into professional multi-track MIDI compositions. Powered by a **LangGraph agent pipeline** — specialized AI agents collaborate to parse intent, plan tracks, enforce music theory, generate notes, self-critique, and refine — producing studio-ready MIDI files from a single text prompt.
 
 ## 🚀 Quick Start
 
@@ -124,38 +124,49 @@ docs/                      # Documentation
 
 ## 🎯 Features
 
+🤖 **Multi-Agent Architecture (LangGraph)**
+- **6 specialized agents** work together in a stateful graph pipeline
+- Intent Parser → Track Planner → Theory Validator → Track Generator → Quality Control → MIDI Creator
+- **Self-refining loop**: Quality Control agent scores output (0–100) and triggers automatic refinement if below threshold
+- Each agent has a focused responsibility — no monolithic prompt
+
 ✨ **Natural Language Music Creation**
-- Describe music in plain English
-- AI understands genre, tempo, key, emotion
-- Generates MIDI files automatically
+- Describe music in plain English — AI understands genre, tempo, key, mood, complexity
+- Chain-of-thought intent parsing with Pydantic-validated structured output
+- Multi-turn conversations: "make it faster", "add strings", "reduce complexity"
 
-🎼 **Smart Composition**
-- Dynamic track generation (1-8 tracks)
-- Multi-turn conversations for iterative building
-- Music theory-aware generation
+🎼 **Music-Theory-Aware Composition**
+- Dynamic track generation (1–8 tracks with GM instrument assignment)
+- Scale/chord validation, voice leading, and genre-appropriate patterns
+- Advanced engines: emotion, cultural music, creative variation
 
-🤖 **Powered by 15+ AI Providers**
-- Recommended: Groq (free, ultra-fast, excellent quality)
+🤖 **15+ LLM Providers — Your Choice**
+- Recommended: **Groq** (free, ultra-fast, excellent quality)
 - Also supports: OpenAI, Claude, Gemini, Ollama, OpenRouter, and more
-- Choose your provider, use any API key
+- Agents work with any provider — swap models without changing code
 
 🎛️ **Professional Output**
 - Standard MIDI format (compatible with all DAWs)
-- Multiple genre support (pop, rock, classical, lo-fi, jazz, electronic, cinematic)
-- Proper music theory implementation
+- Multiple genre support (pop, rock, classical, lo-fi, jazz, electronic, cinematic, ambient)
+- Proper music theory implementation with quality scoring
 
-## 🏗️ Architecture
+## 🏗️ Architecture — Multi-Agent Pipeline
 
 ```mermaid
 flowchart LR
-    A["🎤 Describe your music"] --> B["🤖 AI Understands Intent"]
-    B --> C["🎼 Compose & Validate"]
-    C --> D["🎵 MIDI File"]
+    A["🎤 Your Prompt"] --> B["🧠 Intent\nParser"]
+    B --> C["📋 Track\nPlanner"]
+    C --> D["🎵 Theory\nValidator"]
+    D --> E["🎹 Track\nGenerator"]
+    E --> F{"⭐ Quality\nControl"}
+    F -- "✅ Pass" --> G["💾 MIDI\nCreator"]
+    F -. "🔄 Refine" .-> E
+    G --> H["🎵 .mid"]
 ```
 
-> **You speak, AI composes.** Type a description → AI parses your intent using 15+ LLM providers → LangGraph agents plan tracks, apply music theory, and generate notes → a ready-to-use MIDI file lands in `outputs/`.
+> **6 agents, 1 pipeline.** Each agent has a single job — parse intent, plan tracks, validate theory, generate notes, score quality, write MIDI. If the Quality Control agent scores the composition below 70/100, it automatically sends it back for refinement. No human intervention needed.
 
-📖 *Full technical details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).*
+📖 *Full technical deep-dive in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).*
 
 ## 🚀 Usage
 
@@ -345,9 +356,10 @@ See [LICENSE](LICENSE) for details.
 
 ## Tech Stack
 
-- **LLM**: 15+ providers supported (Groq, OpenAI, Claude, Gemini, etc.)
-- **Keyring**: Windows Credential Manager, macOS Keychain, Linux Secret Service
-- **Agents**: LangGraph
+- **Agent Framework**: LangGraph — stateful multi-agent orchestration with conditional routing
+- **LLM**: 15+ providers (Groq, OpenAI, Claude, Gemini, Ollama, OpenRouter, etc.)
+- **Intent Parsing**: Chain-of-thought prompting + Pydantic v2 structured validation
+- **Security**: OS Keyring (Windows Credential Manager, macOS Keychain, Linux Secret Service)
 - **TUI**: Textual (Python)
 - **Build**: uv, PyInstaller
 
